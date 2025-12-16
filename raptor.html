@@ -129,16 +129,26 @@
         raptorImg.onload = () => console.log('Raptor image loaded');
 
         // Audio (optional - will fail silently if files don't exist)
-        let collisionSound, backgroundMusic;
-        try {
-            collisionSound = new Audio('collision.mp3');
-            backgroundMusic = new Audio('background.mp3');
-            backgroundMusic.loop = true;
-        } catch (e) {
-            console.log('Audio files not found - game will run without sound');
-            collisionSound = { play: () => {}, pause: () => {} };
-            backgroundMusic = { play: () => {}, pause: () => {}, loop: false };
-        }
+        // Create silent fallback objects
+        const silentAudio = { 
+            play: () => Promise.resolve(), 
+            pause: () => {}, 
+            loop: false,
+            volume: 0
+        };
+        
+        let collisionSound = Object.assign({}, silentAudio);
+        let backgroundMusic = Object.assign({}, silentAudio);
+        
+        // Don't load audio files - they're optional
+        // Users can uncomment these lines if they add collision.mp3 and background.mp3
+        /*
+        collisionSound = new Audio('collision.mp3');
+        collisionSound.onerror = () => console.log('collision.mp3 not found - running without collision sound');
+        backgroundMusic = new Audio('background.mp3');
+        backgroundMusic.loop = true;
+        backgroundMusic.onerror = () => console.log('background.mp3 not found - running without music');
+        */
         
         // Detect mobile device
         function detectMobile() {
@@ -1299,6 +1309,7 @@
         function startGame() {
             clearInterval(raptorInterval); // Clear any existing intervals
             initGame(); // Reinitialize the game
+            gameStarted = true; // Mark game as started
             raptorInterval = setInterval(addRaptor, 2000);
             gameLoop();
         }
@@ -1480,8 +1491,7 @@
             startGame();
         });
 
-        initGame();
-        // Don't auto-start - wait for button click
+        // Don't initialize until start button is clicked
     </script>
 </body>
 </html>
