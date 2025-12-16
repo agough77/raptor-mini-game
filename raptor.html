@@ -45,6 +45,13 @@
         #startButton:hover { transform: scale(1.1); }
         #startScreen.hidden { display: none; }
         
+        /* Mobile touch controls */
+        #mobileControls { display: none; position: absolute; bottom: 20px; left: 20px; z-index: 100; }
+        #joystick { position: relative; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); }
+        #joystickKnob { position: absolute; width: 60px; height: 60px; background: rgba(255,255,255,0.6); border-radius: 50%; top: 45px; left: 45px; touch-action: none; }
+        #dashButton { position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px; background: rgba(0,255,255,0.6); border-radius: 50%; border: 3px solid rgba(0,255,255,0.8); display: none; font-size: 14px; color: white; font-weight: bold; text-align: center; line-height: 100px; z-index: 100; }
+        #sprintButton { position: absolute; bottom: 140px; right: 20px; width: 80px; height: 80px; background: rgba(255,255,0,0.6); border-radius: 50%; border: 3px solid rgba(255,255,0,0.8); display: none; font-size: 12px; color: white; font-weight: bold; text-align: center; line-height: 80px; z-index: 100; }
+        
         .bullet { position: absolute; width: 5px; height: 5px; background-color: yellow; border-radius: 50%; box-shadow: 0 0 5px yellow; }
         .explosion { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,150,0,0.8), rgba(255,0,0,0.4), transparent); pointer-events: none; }
     </style>
@@ -87,6 +94,14 @@
         1-9, 0, - keys
     </div>
     
+    <div id="mobileControls">
+        <div id="joystick">
+            <div id="joystickKnob"></div>
+        </div>
+    </div>
+    <div id="dashButton">DASH</div>
+    <div id="sprintButton">SPRINT</div>
+    
     <div id="pauseMenu">
         <h2>PAUSED</h2>
         <p>Press P or ESC to resume</p>
@@ -116,6 +131,23 @@
         const collisionSound = new Audio('collision.mp3');
         const backgroundMusic = new Audio('background.mp3');
         backgroundMusic.loop = true;
+        
+        // Detect mobile device
+        function detectMobile() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+        }
+        
+        isMobile = detectMobile();
+        
+        if (isMobile) {
+            document.getElementById('mobileControls').style.display = 'block';
+            document.getElementById('dashButton').style.display = 'block';
+            document.getElementById('sprintButton').style.display = 'block';
+            document.getElementById('controls').style.display = 'none';
+        }
 
         let human, raptors, score, topScores, gameOver, raptorInterval, gameStarted, level;
         const keys = {};
@@ -150,6 +182,12 @@
         let currentWeapon = 'normal';
         let weaponTimer = 0;
         let weaponPowerups = [];
+        
+        // Mobile touch controls
+        let isMobile = false;
+        let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 };
+        let touchSprint = false;
         
         const weaponPatterns = [
             { name: 'Star', icon: '⭐', color: '#ffff00', duration: 300 },
@@ -560,7 +598,7 @@
         function moveHuman() {
             if (gameStarted && !isPaused) {
                 // Check if sprinting
-                let isSprinting = keys['Shift'] && stamina > 0;
+                let isSprinting = (keys['Shift'] || touchSprint) && stamina > 0;
                 let currentSpeed = human.speed;
                 
                 if (isSprinting) {
@@ -574,6 +612,18 @@
                 
                 // Update stamina UI
                 document.getElementById('staminaFill').style.width = (stamina / maxStamina * 100) + '%';
+                
+                // Mobile joystick input
+                if (isMobile && joystickActive) {
+                    human.x += joystickVector.x * currentSpeed;
+                    human.y += joystickVector.y * currentSpeed;
+                    
+                    // Keep in bounds
+                    if (human.x < 0) human.x = 0;
+                    if (human.x > canvas.width - human.size) human.x = canvas.width - human.size;
+                    if (human.y < 0) human.y = 0;
+                    if (human.y > canvas.height - human.size) human.y = canvas.height - human.size;
+                }
                 
                 // Arrow keys
                 if (keys['ArrowUp'] && human.y > 0) human.y -= currentSpeed;
@@ -1153,6 +1203,75 @@
             if (!gameStarted) gameStarted = true;
         });
         window.addEventListener('keyup', (e) => keys[e.key] = false);
+        
+        // Mobile touch controls
+        if (isMobile) {
+            const joystick = document.getElementById('joystick');
+            const joystickKnob = document.getElementById('joystickKnob');
+            const dashButton = document.getElementById('dashButton');
+            const sprintButton = document.getElementById('sprintButton');
+            
+            // Joystick controls
+            joystickKnob.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                joystickActive = true;
+            });
+            
+            joystickKnob.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!joystickActive) return;
+                
+                const touch = e.touches[0];
+                const joystickRect = joystick.getBoundingClientRect();
+                const centerX = joystickRect.left + joystickRect.width / 2;
+                const centerY = joystickRect.top + joystickRect.height / 2;
+                
+                let deltaX = touch.clientX - centerX;
+                let deltaY = touch.clientY - centerY;
+                
+                const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                const maxDistance = 45;
+                
+                if (distance > maxDistance) {
+                    deltaX = (deltaX / distance) * maxDistance;
+                    deltaY = (deltaY / distance) * maxDistance;
+                }
+                
+                joystickKnob.style.left = (45 + deltaX) + 'px';
+                joystickKnob.style.top = (45 + deltaY) + 'px';
+                
+                joystickVector.x = deltaX / maxDistance;
+                joystickVector.y = deltaY / maxDistance;
+            });
+            
+            joystickKnob.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                joystickActive = false;
+                joystickKnob.style.left = '45px';
+                joystickKnob.style.top = '45px';
+                joystickVector.x = 0;
+                joystickVector.y = 0;
+            });
+            
+            // Dash button
+            dashButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (gameStarted && !isPaused && dashCooldown === 0) {
+                    performDash();
+                }
+            });
+            
+            // Sprint button
+            sprintButton.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                touchSprint = true;
+            });
+            
+            sprintButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                touchSprint = false;
+            });
+        }
 
         function addRaptor() {
             const size = 40;
