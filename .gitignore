@@ -1,0 +1,20 @@
+# Image files (optional - users can generate their own)
+*.jpeg
+*.jpg
+*.png
+
+# Audio files (if added later)
+*.mp3
+*.wav
+*.ogg
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

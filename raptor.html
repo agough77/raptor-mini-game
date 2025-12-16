@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Raptor Chase Game</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; margin: auto; background: url('jungle.png') no-repeat; background-size: 100% 100%; width: 100vw; height: 100vh; transition: box-shadow 0.3s, background 1s ease; }
+        #score { color: white; position: absolute; top: 10px; left: 10px; font-size: 20px; text-shadow: 2px 2px 4px black; }
+        #level { color: white; position: absolute; top: 40px; left: 10px; font-size: 20px; text-shadow: 2px 2px 4px black; }
+        #topScores { color: white; position: absolute; top: 70px; left: 10px; font-size: 20px; background-color: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
+        #startOver { display: none; margin-top: 20px; font-size: 20px; padding: 10px; background-color: white; border: none; cursor: pointer; border-radius: 5px; }
+        #finalScore { display: none; margin-bottom: 20px; font-size: 20px; color: white; }
+        #gameOverScreen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;}
+        
+        /* New UI Elements */
+        #staminaBar { position: absolute; top: 10px; right: 10px; width: 200px; height: 20px; background-color: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 10px; overflow: hidden; }
+        #staminaFill { height: 100%; width: 100%; background: linear-gradient(90deg, #00ff00, #ffff00); transition: width 0.1s; }
+        #staminaLabel { color: white; position: absolute; top: 35px; right: 10px; font-size: 14px; text-shadow: 2px 2px 4px black; }
+        
+        #dashCooldown { position: absolute; top: 60px; right: 10px; width: 200px; height: 15px; background-color: rgba(0,0,0,0.5); border: 2px solid cyan; border-radius: 10px; overflow: hidden; }
+        #dashFill { height: 100%; width: 100%; background: linear-gradient(90deg, #00ffff, #0080ff); transition: width 0.1s; }
+        #dashLabel { color: cyan; position: absolute; top: 80px; right: 10px; font-size: 14px; text-shadow: 2px 2px 4px black; }
+        
+        #ammoCounter { color: white; position: absolute; top: 100px; right: 10px; font-size: 18px; text-shadow: 2px 2px 4px black; font-weight: bold; }
+        #bombTimer { color: orange; position: absolute; top: 125px; right: 10px; font-size: 16px; text-shadow: 2px 2px 4px black; }
+        
+        #pauseMenu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 15px; text-align: center; border: 3px solid white; }
+        #pauseMenu h2 { margin-top: 0; font-size: 36px; }
+        #pauseMenu p { font-size: 18px; margin: 10px 0; }
+        #resumeBtn { margin-top: 20px; font-size: 20px; padding: 10px 30px; background-color: #00ff00; border: none; cursor: pointer; border-radius: 5px; }
+        
+        .powerup { position: absolute; width: 30px; height: 30px; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        
+        .particle { position: absolute; width: 5px; height: 5px; background-color: #ff0000; border-radius: 50%; pointer-events: none; }
+        
+        #controls { color: white; position: absolute; bottom: 10px; right: 10px; font-size: 12px; text-align: right; background-color: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
+        
+        .bullet { position: absolute; width: 5px; height: 5px; background-color: yellow; border-radius: 50%; box-shadow: 0 0 5px yellow; }
+        .explosion { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,150,0,0.8), rgba(255,0,0,0.4), transparent); pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="level">Level: 1</div>
+    <div id="topScores"></div>
+    
+    <div id="staminaBar"><div id="staminaFill"></div></div>
+    <div id="staminaLabel">Stamina (Hold Shift to Sprint)</div>
+    
+    <div id="dashCooldown"><div id="dashFill"></div></div>
+    <div id="dashLabel">Dash (Spacebar)</div>
+    
+    <div id="ammoCounter">🔫 Ammo: ∞</div>
+    <div id="bombTimer">💣 Next Bomb: --s</div>
+    <div id="weaponStatus" style="color: yellow; position: absolute; top: 150px; right: 10px; font-size: 18px; text-shadow: 2px 2px 4px black; font-weight: bold;"></div>
+    
+    <div id="controls">
+        <strong>Controls:</strong><br>
+        WASD / Arrows - Move<br>
+        Shift - Sprint<br>
+        Space - Dash<br>
+        Auto-Shoot Enabled<br>
+        P / Esc - Pause<br>
+        <br>
+        <strong>Test Levels:</strong><br>
+        1-9, 0, - keys
+    </div>
+    
+    <div id="pauseMenu">
+        <h2>PAUSED</h2>
+        <p>Press P or ESC to resume</p>
+        <p>Or click the button below</p>
+        <button id="resumeBtn">Resume Game</button>
+    </div>
+    
+    <div id="gameOverScreen">
+        <h1>Game Over</h1>
+        <p id="finalScore"></p>
+        <button id="startOver">Start Over</button>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const humanImg = new Image();
+        humanImg.src = 'human.png';
+        humanImg.onload = () => console.log('Human image loaded');
+        const raptorImg = new Image();
+        raptorImg.src = 'raptor.png';
+        raptorImg.onload = () => console.log('Raptor image loaded');
+
+        const collisionSound = new Audio('collision.mp3');
+        const backgroundMusic = new Audio('background.mp3');
+        backgroundMusic.loop = true;
+
+        let human, raptors, score, topScores, gameOver, raptorInterval, gameStarted, level;
+        const keys = {};
+        
+        // New game features
+        let stamina = 100;
+        let maxStamina = 100;
+        let staminaRegenRate = 0.5;
+        let staminaDrainRate = 1.5;
+        
+        let dashCooldown = 0;
+        let maxDashCooldown = 60; // frames (1 second at 60fps)
+        let dashDistance = 100;
+        
+        let isPaused = false;
+        let powerups = [];
+        let particles = [];
+        
+        let bullets = [];
+        let bombs = [];
+        let ammo = Infinity;
+        let shootCooldown = 0;
+        let maxShootCooldown = 45; // frames between shots (slower automatic fire)
+        
+        let bombInterval = 15000; // 15 seconds
+        let nextBombTime = 0;
+        
+        let hazards = [];
+        let hazardSpawnTimer = 0;
+        let hazardSpawnInterval = 180; // frames (3 seconds)
+        
+        let currentWeapon = 'normal';
+        let weaponTimer = 0;
+        let weaponPowerups = [];
+        
+        const weaponPatterns = [
+            { name: 'Star', icon: '⭐', color: '#ffff00', duration: 300 },
+            { name: 'Spiral', icon: '🌀', color: '#00ffff', duration: 300 },
+            { name: 'Shotgun', icon: '💥', color: '#ff6600', duration: 300 },
+            { name: 'Laser', icon: '⚡', color: '#00ff00', duration: 300 },
+            { name: 'Circle', icon: '⭕', color: '#ff00ff', duration: 300 },
+            { name: 'X-Pattern', icon: '❌', color: '#ff0000', duration: 300 },
+            { name: 'Wave', icon: '〰️', color: '#0088ff', duration: 300 },
+            { name: 'Rapid', icon: '🔥', color: '#ff4500', duration: 300 },
+            { name: 'Sniper', icon: '🎯', color: '#ffffff', duration: 300 },
+            { name: 'Chaos', icon: '💫', color: '#ff1493', duration: 300 }
+        ];
+        
+        let invincible = false;
+        let invincibleTimer = 0;
+        let speedBoost = false;
+        let speedBoostTimer = 0;
+        let freezeRaptors = false;
+        let freezeTimer = 0;
+        
+        // Background themes for different level ranges
+        const backgroundThemes = [
+            { level: 1, name: 'Jungle', image: 'jungle.jpeg', gradient: 'linear-gradient(180deg, #2d5016 0%, #1a3409 50%, #0d1f04 100%)', fallback: '#1a3409', hazard: 'quicksand' },
+            { level: 5, name: 'Desert', image: 'desert.jpeg', gradient: 'linear-gradient(180deg, #f4a460 0%, #d2691e 50%, #8b4513 100%)', fallback: '#d2691e', hazard: 'sandstorm' },
+            { level: 10, name: 'Arctic', image: 'arctic.jpeg', gradient: 'linear-gradient(180deg, #b0e0e6 0%, #4682b4 50%, #1e3a5f 100%)', fallback: '#4682b4', hazard: 'ice' },
+            { level: 15, name: 'Volcano', image: 'volcano.jpeg', gradient: 'linear-gradient(180deg, #ff4500 0%, #8b0000 50%, #2d0000 100%)', fallback: '#8b0000', hazard: 'lava' },
+            { level: 20, name: 'Night', image: 'night.jpeg', gradient: 'linear-gradient(180deg, #191970 0%, #0c0c30 50%, #000000 100%)', fallback: '#0c0c30', hazard: 'fog' },
+            { level: 25, name: 'Swamp', image: 'swamp.jpeg', gradient: 'linear-gradient(180deg, #556b2f 0%, #2f4f2f 50%, #1c2e1c 100%)', fallback: '#2f4f2f', hazard: 'mud' },
+            { level: 30, name: 'Canyon', image: 'canyon.jpeg', gradient: 'linear-gradient(180deg, #cd853f 0%, #a0522d 50%, #654321 100%)', fallback: '#a0522d', hazard: 'rockslide' },
+            { level: 40, name: 'Storm', image: 'storm.jpeg', gradient: 'linear-gradient(180deg, #708090 0%, #2f4f4f 50%, #1c1c1c 100%)', fallback: '#2f4f4f', hazard: 'tornado' },
+            { level: 50, name: 'Lava', image: 'lava.jpeg', gradient: 'linear-gradient(180deg, #ff6347 0%, #dc143c 50%, #4d0000 100%)', fallback: '#dc143c', hazard: 'lavapool' },
+            { level: 75, name: 'Void', image: 'void.jpeg', gradient: 'linear-gradient(180deg, #1a001a 0%, #0d000d 50%, #000000 100%)', fallback: '#0d000d', hazard: 'vortex' },
+            { level: 100, name: 'Rainbow', image: 'rainbow.jpeg', gradient: 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)', fallback: '#4b0082', hazard: 'rainbow' }
+        ];
+
+        function updateBackground(level) {
+            // Find the appropriate theme for current level
+            let currentTheme = backgroundThemes[0];
+            for (let i = backgroundThemes.length - 1; i >= 0; i--) {
+                if (level >= backgroundThemes[i].level) {
+                    currentTheme = backgroundThemes[i];
+                    break;
+                }
+            }
+            
+            // Try to load image, fallback to gradient if it fails
+            const img = new Image();
+            img.onload = () => {
+                canvas.style.background = `url('${currentTheme.image}') no-repeat center center`;
+                canvas.style.backgroundSize = 'cover';
+            };
+            img.onerror = () => {
+                // If image fails to load, use gradient
+                canvas.style.background = currentTheme.gradient;
+                canvas.style.backgroundSize = '100% 100%';
+            };
+            img.src = currentTheme.image;
+            
+            // Update level display with theme name
+            document.getElementById('level').innerText = `Level: ${level} - ${currentTheme.name}`;
+        }
+        
+        function getNextLevelScore(currentLevel) {
+            // Progressive scaling: Level 1->2 needs 200, Level 2->3 needs 350, etc.
+            // Formula: 200 + (level - 1) * 150
+            return 200 + (currentLevel - 1) * 150;
+        }
+        
+        function initGame() {
+            human = { x: 50, y: 50, size: 40, speed: 5, baseSpeed: 5 };
+            raptors = [];
+            score = 0;
+            level = 1;
+            stamina = 100;
+            dashCooldown = 0;
+            isPaused = false;
+            powerups = [];
+            particles = [];
+            bullets = [];
+            bombs = [];
+            shootCooldown = 0;
+            nextBombTime = Date.now() + bombInterval;
+            hazards = [];
+            hazardSpawnTimer = 0;
+            currentWeapon = 'normal';
+            weaponTimer = 0;
+            weaponPowerups = [];
+            invincible = false;
+            invincibleTimer = 0;
+            speedBoost = false;
+            speedBoostTimer = 0;
+            freezeRaptors = false;
+            freezeTimer = 0;
+            topScores = JSON.parse(localStorage.getItem('topScores')) || [];
+            gameOver = false;
+            gameStarted = false;
+            document.getElementById('score').innerText = 'Score: ' + score + ' | Next Level: ' + getNextLevelScore(1);
+            updateBackground(level);
+            document.getElementById('topScores').innerHTML = '';
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('startOver').style.display = 'none';
+            document.getElementById('pauseMenu').style.display = 'none';
+            canvas.style.boxShadow = 'none';
+            clearInterval(raptorInterval);
+            backgroundMusic.play();
+            for (let key in keys) {
+                if (keys.hasOwnProperty(key)) {
+                    keys[key] = false;
+                }
+            }
+        }
+
+        function drawHuman() {
+            // Draw trail effect
+            if (gameStarted && !gameOver) {
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = speedBoost ? '#00ffff' : '#ffffff';
+                ctx.fillRect(human.x + human.size/4, human.y + human.size/4, human.size/2, human.size/2);
+                ctx.globalAlpha = 1.0;
+            }
+            
+            // Draw invincibility shield
+            if (invincible) {
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(human.x + human.size/2, human.y + human.size/2, human.size/2 + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.drawImage(humanImg, human.x, human.y, human.size, human.size);
+        }
+
+        function drawRaptors() {
+            raptors.forEach(raptor => {
+                // Draw frozen effect
+                if (freezeRaptors) {
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#88ffff';
+                    ctx.fillRect(raptor.x, raptor.y, raptor.size, raptor.size);
+                    ctx.globalAlpha = 1.0;
+                }
+                ctx.drawImage(raptorImg, raptor.x, raptor.y, raptor.size, raptor.size);
+            });
+        }
+        
+        function drawBullets() {
+            bullets.forEach(bullet => {
+                ctx.fillStyle = bullet.color || '#ffff00';
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = bullet.color || '#ffff00';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+        }
+        
+        function drawBombs() {
+            bombs.forEach(bomb => {
+                // Draw bomb falling
+                ctx.save();
+                ctx.globalAlpha = 0.9;
+                
+                // Bomb body
+                ctx.fillStyle = '#ff4500';
+                ctx.beginPath();
+                ctx.arc(bomb.x, bomb.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Fuse
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(bomb.x, bomb.y - 15);
+                ctx.lineTo(bomb.x - 5, bomb.y - 25);
+                ctx.stroke();
+                
+                // Spark
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(bomb.x - 5, bomb.y - 25, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Explosion radius indicator
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.arc(bomb.x, bomb.y, bomb.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                ctx.restore();
+            });
+        }
+        
+        function drawHazards() {
+            hazards.forEach(hazard => {
+                ctx.save();
+                
+                if (hazard.type === 'tornado') {
+                    // Spiraling tornado
+                    ctx.globalAlpha = 0.6;
+                    ctx.strokeStyle = '#888888';
+                    ctx.lineWidth = 3;
+                    for (let i = 0; i < 5; i++) {
+                        const angle = hazard.rotation + (i * Math.PI * 2 / 5);
+                        const radius = hazard.radius * (0.3 + i * 0.15);
+                        ctx.beginPath();
+                        ctx.arc(hazard.x, hazard.y, radius, angle, angle + Math.PI * 1.5);
+                        ctx.stroke();
+                    }
+                } else if (hazard.type === 'quicksand' || hazard.type === 'mud') {
+                    // Sinking area
+                    ctx.globalAlpha = 0.4;
+                    ctx.fillStyle = '#8b7355';
+                    ctx.beginPath();
+                    ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Ripple effect
+                    ctx.globalAlpha = 0.2;
+                    ctx.strokeStyle = '#5c4833';
+                    ctx.lineWidth = 2;
+                    for (let i = 1; i <= 3; i++) {
+                        ctx.beginPath();
+                        ctx.arc(hazard.x, hazard.y, hazard.radius * (0.3 * i), 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                } else if (hazard.type === 'ice') {
+                    // Slippery ice patch
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#b0e0e6';
+                    ctx.beginPath();
+                    ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 0.8;
+                    ctx.strokeStyle = '#87ceeb';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                } else if (hazard.type === 'lava' || hazard.type === 'lavapool') {
+                    // Bubbling lava
+                    ctx.globalAlpha = 0.7;
+                    const gradient = ctx.createRadialGradient(hazard.x, hazard.y, 0, hazard.x, hazard.y, hazard.radius);
+                    gradient.addColorStop(0, '#ff6347');
+                    gradient.addColorStop(0.5, '#ff4500');
+                    gradient.addColorStop(1, '#8b0000');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (hazard.type === 'vortex') {
+                    // Spinning vortex
+                    ctx.globalAlpha = 0.6;
+                    for (let i = 0; i < 4; i++) {
+                        const angle = hazard.rotation + (i * Math.PI / 2);
+                        const gradient = ctx.createRadialGradient(hazard.x, hazard.y, 0, hazard.x, hazard.y, hazard.radius);
+                        gradient.addColorStop(0, 'rgba(138, 43, 226, 0.8)');
+                        gradient.addColorStop(1, 'rgba(75, 0, 130, 0)');
+                        ctx.fillStyle = gradient;
+                        ctx.beginPath();
+                        ctx.arc(hazard.x, hazard.y, hazard.radius, angle, angle + Math.PI / 2);
+                        ctx.lineTo(hazard.x, hazard.y);
+                        ctx.fill();
+                    }
+                } else if (hazard.type === 'sandstorm') {
+                    // Swirling sand
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillStyle = '#daa520';
+                    for (let i = 0; i < 8; i++) {
+                        const angle = hazard.rotation + (i * Math.PI / 4);
+                        const x = hazard.x + Math.cos(angle) * hazard.radius * 0.5;
+                        const y = hazard.y + Math.sin(angle) * hazard.radius * 0.5;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                } else if (hazard.type === 'fog') {
+                    // Obscuring fog
+                    ctx.globalAlpha = 0.4;
+                    const gradient = ctx.createRadialGradient(hazard.x, hazard.y, 0, hazard.x, hazard.y, hazard.radius);
+                    gradient.addColorStop(0, 'rgba(200, 200, 200, 0.6)');
+                    gradient.addColorStop(1, 'rgba(100, 100, 100, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(hazard.x, hazard.y, hazard.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        function updateHazards() {
+            // Spawn new hazards
+            hazardSpawnTimer++;
+            if (hazardSpawnTimer >= hazardSpawnInterval && hazards.length < 3) {
+                spawnHazard();
+                hazardSpawnTimer = 0;
+            }
+            
+            // Update existing hazards
+            hazards = hazards.filter(hazard => {
+                // Rotate spinning hazards
+                if (hazard.type === 'tornado' || hazard.type === 'vortex' || hazard.type === 'sandstorm') {
+                    hazard.rotation += 0.1;
+                }
+                
+                // Move some hazards
+                if (hazard.type === 'tornado' || hazard.type === 'sandstorm') {
+                    hazard.x += hazard.vx;
+                    hazard.y += hazard.vy;
+                    
+                    // Bounce off walls
+                    if (hazard.x < hazard.radius || hazard.x > canvas.width - hazard.radius) {
+                        hazard.vx *= -1;
+                    }
+                    if (hazard.y < hazard.radius || hazard.y > canvas.height - hazard.radius) {
+                        hazard.vy *= -1;
+                    }
+                }
+                
+                // Decrease lifetime
+                hazard.life--;
+                
+                // Check collision with player
+                const dx = human.x + human.size/2 - hazard.x;
+                const dy = human.y + human.size/2 - hazard.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < hazard.radius) {
+                    if (hazard.type === 'quicksand' || hazard.type === 'mud') {
+                        // Slow down player
+                        human.speed = Math.max(human.baseSpeed * 0.4, 2);
+                    } else if (hazard.type === 'ice') {
+                        // Slippery - add sliding
+                        if (keys['ArrowUp'] || keys['w'] || keys['W']) human.y -= human.speed * 0.3;
+                        if (keys['ArrowDown'] || keys['s'] || keys['S']) human.y += human.speed * 0.3;
+                        if (keys['ArrowLeft'] || keys['a'] || keys['A']) human.x -= human.speed * 0.3;
+                        if (keys['ArrowRight'] || keys['d'] || keys['D']) human.x += human.speed * 0.3;
+                    } else if (hazard.type === 'tornado' || hazard.type === 'vortex') {
+                        // Pull player toward center
+                        const pullStrength = 0.5;
+                        human.x -= dx * pullStrength * 0.05;
+                        human.y -= dy * pullStrength * 0.05;
+                    } else if (hazard.type === 'sandstorm') {
+                        // Push player in random swirling direction
+                        const windAngle = hazard.rotation + Math.random() * Math.PI / 4;
+                        const windStrength = 2;
+                        human.x += Math.cos(windAngle) * windStrength;
+                        human.y += Math.sin(windAngle) * windStrength;
+                        
+                        // Also push nearby raptors
+                        raptors.forEach(raptor => {
+                            const rdx = raptor.x + raptor.size/2 - hazard.x;
+                            const rdy = raptor.y + raptor.size/2 - hazard.y;
+                            const rdist = Math.sqrt(rdx*rdx + rdy*rdy);
+                            if (rdist < hazard.radius) {
+                                raptor.x += Math.cos(windAngle) * windStrength * 0.8;
+                                raptor.y += Math.sin(windAngle) * windStrength * 0.8;
+                            }
+                        });
+                    } else if (hazard.type === 'lava' || hazard.type === 'lavapool') {
+                        // Damage over time - reduce stamina
+                        stamina -= 2;
+                        if (stamina < 0) stamina = 0;
+                    }
+                } else {
+                    // Restore normal speed when not in hazard
+                    if (human.speed < human.baseSpeed) {
+                        human.speed = Math.min(human.speed + 0.2, human.baseSpeed);
+                    }
+                }
+                
+                return hazard.life > 0;
+            });
+        }
+        
+        function spawnHazard() {
+            // Get current theme
+            let currentTheme = backgroundThemes[0];
+            for (let i = backgroundThemes.length - 1; i >= 0; i--) {
+                if (level >= backgroundThemes[i].level) {
+                    currentTheme = backgroundThemes[i];
+                    break;
+                }
+            }
+            
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = 60 + Math.random() * 40;
+            
+            const hazard = {
+                x: x,
+                y: y,
+                radius: radius,
+                type: currentTheme.hazard,
+                life: 300 + Math.random() * 300, // 5-10 seconds
+                rotation: 0,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2
+            };
+            
+            hazards.push(hazard);
+        }
+
+        function moveHuman() {
+            if (gameStarted && !isPaused) {
+                // Check if sprinting
+                let isSprinting = keys['Shift'] && stamina > 0;
+                let currentSpeed = human.speed;
+                
+                if (isSprinting) {
+                    currentSpeed *= 1.8;
+                    stamina -= staminaDrainRate;
+                    if (stamina < 0) stamina = 0;
+                } else {
+                    stamina += staminaRegenRate;
+                    if (stamina > maxStamina) stamina = maxStamina;
+                }
+                
+                // Update stamina UI
+                document.getElementById('staminaFill').style.width = (stamina / maxStamina * 100) + '%';
+                
+                // Arrow keys
+                if (keys['ArrowUp'] && human.y > 0) human.y -= currentSpeed;
+                if (keys['ArrowDown'] && human.y < canvas.height - human.size) human.y += currentSpeed;
+                if (keys['ArrowLeft'] && human.x > 0) human.x -= currentSpeed;
+                if (keys['ArrowRight'] && human.x < canvas.width - human.size) human.x += currentSpeed;
+                
+                // WASD keys
+                if ((keys['w'] || keys['W']) && human.y > 0) human.y -= currentSpeed;
+                if ((keys['s'] || keys['S']) && human.y < canvas.height - human.size) human.y += currentSpeed;
+                if ((keys['a'] || keys['A']) && human.x > 0) human.x -= currentSpeed;
+                if ((keys['d'] || keys['D']) && human.x < canvas.width - human.size) human.x += currentSpeed;
+                
+                // Update dash cooldown
+                if (dashCooldown > 0) {
+                    dashCooldown--;
+                }
+                document.getElementById('dashFill').style.width = ((maxDashCooldown - dashCooldown) / maxDashCooldown * 100) + '%';
+                
+                // Update shoot cooldown
+                if (shootCooldown > 0) {
+                    shootCooldown--;
+                } else {
+                    // Auto-shoot at nearest raptor
+                    autoShoot();
+                }
+            }
+        }
+        
+        function autoShoot() {
+            if (raptors.length === 0) return;
+            
+            // Find nearest raptor for targeting
+            let nearestRaptor = null;
+            let minDistance = Infinity;
+            
+            raptors.forEach(raptor => {
+                const dx = raptor.x + raptor.size/2 - (human.x + human.size/2);
+                const dy = raptor.y + raptor.size/2 - (human.y + human.size/2);
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestRaptor = raptor;
+                }
+            });
+            
+            if (nearestRaptor) {
+                const targetX = nearestRaptor.x + nearestRaptor.size/2;
+                const targetY = nearestRaptor.y + nearestRaptor.size/2;
+                
+                // Shoot based on current weapon
+                if (currentWeapon === 'Star') {
+                    shootStar();
+                } else if (currentWeapon === 'Spiral') {
+                    shootSpiral();
+                } else if (currentWeapon === 'Shotgun') {
+                    shootShotgun(targetX, targetY);
+                } else if (currentWeapon === 'Laser') {
+                    shootLaser(targetX, targetY);
+                } else if (currentWeapon === 'Circle') {
+                    shootCircle();
+                } else if (currentWeapon === 'X-Pattern') {
+                    shootXPattern();
+                } else if (currentWeapon === 'Wave') {
+                    shootWave(targetX, targetY);
+                } else if (currentWeapon === 'Rapid') {
+                    shootRapid(targetX, targetY);
+                } else if (currentWeapon === 'Sniper') {
+                    shootSniper(targetX, targetY);
+                } else if (currentWeapon === 'Chaos') {
+                    shootChaos();
+                } else {
+                    shoot(targetX, targetY);
+                }
+            }
+        }
+        
+        function shoot(targetX, targetY, speed = 12, color = '#ffff00') {
+            if (shootCooldown > 0) return;
+            
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            
+            const vx = (dx / distance) * speed;
+            const vy = (dy / distance) * speed;
+            
+            bullets.push({
+                x: human.x + human.size/2,
+                y: human.y + human.size/2,
+                vx: vx,
+                vy: vy,
+                color: color
+            });
+            
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootStar() {
+            // 5-point star pattern
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * Math.PI * 2 / 5) - Math.PI / 2;
+                const vx = Math.cos(angle) * 12;
+                const vy = Math.sin(angle) * 12;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ffff00' });
+            }
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootSpiral() {
+            const time = Date.now() / 100;
+            for (let i = 0; i < 3; i++) {
+                const angle = time + (i * Math.PI * 2 / 3);
+                const vx = Math.cos(angle) * 10;
+                const vy = Math.sin(angle) * 10;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#00ffff' });
+            }
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootShotgun(targetX, targetY) {
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const baseAngle = Math.atan2(dy, dx);
+            
+            for (let i = -2; i <= 2; i++) {
+                const angle = baseAngle + (i * 0.2);
+                const vx = Math.cos(angle) * 15;
+                const vy = Math.sin(angle) * 15;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ff6600' });
+            }
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootLaser(targetX, targetY) {
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const vx = (dx / distance) * 25;
+            const vy = (dy / distance) * 25;
+            bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#00ff00' });
+            shootCooldown = 5; // Faster
+        }
+        
+        function shootCircle() {
+            for (let i = 0; i < 12; i++) {
+                const angle = (i * Math.PI * 2 / 12);
+                const vx = Math.cos(angle) * 10;
+                const vy = Math.sin(angle) * 10;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ff00ff' });
+            }
+            shootCooldown = maxShootCooldown * 2;
+        }
+        
+        function shootXPattern() {
+            const angles = [Math.PI/4, 3*Math.PI/4, 5*Math.PI/4, 7*Math.PI/4];
+            angles.forEach(angle => {
+                const vx = Math.cos(angle) * 12;
+                const vy = Math.sin(angle) * 12;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ff0000' });
+            });
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootWave(targetX, targetY) {
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const baseAngle = Math.atan2(dy, dx);
+            const perpAngle = baseAngle + Math.PI / 2;
+            
+            for (let i = -1; i <= 1; i++) {
+                const offsetX = Math.cos(perpAngle) * i * 20;
+                const offsetY = Math.sin(perpAngle) * i * 20;
+                const vx = Math.cos(baseAngle) * 12;
+                const vy = Math.sin(baseAngle) * 12;
+                bullets.push({ x: human.x + human.size/2 + offsetX, y: human.y + human.size/2 + offsetY, vx, vy, color: '#0088ff' });
+            }
+            shootCooldown = maxShootCooldown;
+        }
+        
+        function shootRapid(targetX, targetY) {
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const vx = (dx / distance) * 15;
+            const vy = (dy / distance) * 15;
+            bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ff4500' });
+            shootCooldown = 3; // Very fast
+        }
+        
+        function shootSniper(targetX, targetY) {
+            const dx = targetX - (human.x + human.size/2);
+            const dy = targetY - (human.y + human.size/2);
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const vx = (dx / distance) * 30;
+            const vy = (dy / distance) * 30;
+            bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ffffff', damage: 3 });
+            shootCooldown = maxShootCooldown * 3; // Slow but powerful
+        }
+        
+        function shootChaos() {
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 8 + Math.random() * 8;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                bullets.push({ x: human.x + human.size/2, y: human.y + human.size/2, vx, vy, color: '#ff1493' });
+            }
+            shootCooldown = maxShootCooldown;
+        }
+
+        function moveRaptors() {
+            if (freezeRaptors) return; // Don't move if frozen
+            
+            raptors.forEach(raptor => {
+                const randomFactor = Math.random() * 2 - 1; // Random value between -1 and 1
+                if (raptor.x < human.x) raptor.x += raptor.speed + randomFactor;
+                if (raptor.x > human.x) raptor.x -= raptor.speed + randomFactor;
+                if (raptor.y < human.y) raptor.y += raptor.speed + randomFactor;
+                if (raptor.y > human.y) raptor.y -= raptor.speed + randomFactor;
+            });
+        }
+        
+        function updateBullets() {
+            bullets = bullets.filter(bullet => {
+                // Move bullet
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                
+                // Check if off screen
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    return false;
+                }
+                
+                // Check collision with raptors
+                for (let i = raptors.length - 1; i >= 0; i--) {
+                    const raptor = raptors[i];
+                    if (bullet.x > raptor.x && bullet.x < raptor.x + raptor.size &&
+                        bullet.y > raptor.y && bullet.y < raptor.y + raptor.size) {
+                        // Hit!
+                        raptors.splice(i, 1);
+                        score += 10; // Bonus points for killing raptor
+                        createParticle(raptor.x + raptor.size/2, raptor.y + raptor.size/2, '#ff0000');
+                        createParticle(raptor.x + raptor.size/2, raptor.y + raptor.size/2, '#ff0000');
+                        createParticle(raptor.x + raptor.size/2, raptor.y + raptor.size/2, '#ff0000');
+                        return false; // Remove bullet
+                    }
+                }
+                
+                return true; // Keep bullet
+            });
+        }
+        
+        function updateBombs() {
+            bombs = bombs.filter(bomb => {
+                // Move bomb down
+                bomb.y += bomb.speed;
+                
+                // Check if hit ground or timer expired
+                if (bomb.y >= canvas.height - 20 || Date.now() >= bomb.explodeTime) {
+                    // EXPLODE!
+                    explodeBomb(bomb.x, bomb.y, bomb.radius);
+                    return false;
+                }
+                
+                return true;
+            });
+            
+            // Spawn new bomb if time
+            if (Date.now() >= nextBombTime && !isPaused && gameStarted) {
+                spawnBomb();
+                nextBombTime = Date.now() + bombInterval;
+            }
+            
+            // Update bomb timer UI
+            const timeUntilBomb = Math.max(0, Math.ceil((nextBombTime - Date.now()) / 1000));
+            document.getElementById('bombTimer').innerText = `💣 Next Bomb: ${timeUntilBomb}s`;
+        }
+        
+        function spawnBomb() {
+            const x = Math.random() * canvas.width;
+            const y = -50;
+            const radius = 100 + Math.random() * 100; // Random explosion radius
+            bombs.push({
+                x: x,
+                y: y,
+                speed: 3,
+                radius: radius,
+                explodeTime: Date.now() + 3000 // Explode after 3 seconds
+            });
+        }
+        
+        function explodeBomb(x, y, radius) {
+            // Visual explosion
+            for (let i = 0; i < 30; i++) {
+                createParticle(x, y, '#ff6600');
+                createParticle(x, y, '#ff0000');
+                createParticle(x, y, '#ffff00');
+            }
+            
+            // Create expanding explosion circle
+            let explosionSize = 0;
+            const maxSize = radius;
+            const explosionInterval = setInterval(() => {
+                explosionSize += 15;
+                if (explosionSize >= maxSize) {
+                    clearInterval(explosionInterval);
+                }
+            }, 30);
+            
+            // Remove raptors in radius
+            for (let i = raptors.length - 1; i >= 0; i--) {
+                const raptor = raptors[i];
+                const dx = raptor.x + raptor.size/2 - x;
+                const dy = raptor.y + raptor.size/2 - y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < radius) {
+                    raptors.splice(i, 1);
+                    score += 5; // Bonus points
+                    createParticle(raptor.x + raptor.size/2, raptor.y + raptor.size/2, '#ff6600');
+                }
+            }
+        }
+
+        function checkCollision() {
+            raptors.forEach(raptor => {
+                if (human.x < raptor.x + raptor.size &&
+                    human.x + human.size > raptor.x &&
+                    human.y < raptor.y + raptor.size &&
+                    human.y + human.size > raptor.y) {
+                    
+                    if (invincible) {
+                        return; // Don't take damage if invincible
+                    }
+                    
+                    gameOver = true;
+                    collisionSound.play();
+                    
+                    // Create particle explosion
+                    for (let i = 0; i < 20; i++) {
+                        createParticle(human.x + human.size/2, human.y + human.size/2);
+                    }
+                    
+                    saveScore();
+                    document.getElementById('finalScore').innerText = 'Your score: ' + score;
+                    displayTopScores();
+                    document.getElementById('gameOverScreen').style.display = 'block';
+                    document.getElementById('startOver').style.display = 'block';
+                    backgroundMusic.pause();
+                }
+            });
+            
+            // Check power-up collection
+            powerups.forEach((powerup, index) => {
+                if (human.x < powerup.x + 30 &&
+                    human.x + human.size > powerup.x &&
+                    human.y < powerup.y + 30 &&
+                    human.y + human.size > powerup.y) {
+                    activatePowerup(powerup.type);
+                    powerups.splice(index, 1);
+                }
+            });
+            
+            // Check weapon powerup collection
+            weaponPowerups.forEach((wp, index) => {
+                if (human.x < wp.x + 30 &&
+                    human.x + human.size > wp.x &&
+                    human.y < wp.y + 30 &&
+                    human.y + human.size > wp.y) {
+                    currentWeapon = wp.pattern.name;
+                    weaponTimer = wp.pattern.duration;
+                    weaponPowerups.splice(index, 1);
+                    
+                    // Visual feedback
+                    for (let i = 0; i < 20; i++) {
+                        createParticle(wp.x + 15, wp.y + 15, wp.pattern.color);
+                    }
+                }
+            });
+        }
+
+        function updateScore() {
+            if (!gameOver && gameStarted && !isPaused) {
+                score++;
+                
+                // Check for level up with progressive requirements
+                const nextLevelScore = getNextLevelScore(level);
+                if (score >= nextLevelScore && level < 100) {
+                    level++;
+                    updateBackground(level);
+                    human.baseSpeed += 1;
+                    human.speed = human.baseSpeed;
+                    raptors.forEach(raptor => raptor.speed += 1);
+                    addRaptors(level);
+                    
+                    // Visual level up effect
+                    for (let i = 0; i < 50; i++) {
+                        createParticle(human.x + human.size/2, human.y + human.size/2, '#00ff00');
+                        createParticle(human.x + human.size/2, human.y + human.size/2, '#ffff00');
+                    }
+                }
+                
+                // Update score display with progress to next level
+                const nextScore = getNextLevelScore(level);
+                const progress = level < 100 ? ` | Next Level: ${nextScore}` : ' | MAX LEVEL';
+                document.getElementById('score').innerText = 'Score: ' + score + progress;
+                
+                // Update power-up timers
+                if (invincibleTimer > 0) {
+                    invincibleTimer--;
+                    if (invincibleTimer === 0) invincible = false;
+                }
+                if (speedBoostTimer > 0) {
+                    speedBoostTimer--;
+                    if (speedBoostTimer === 0) {
+                        speedBoost = false;
+                        human.speed = human.baseSpeed;
+                    }
+                }
+                if (freezeTimer > 0) {
+                    freezeTimer--;
+                    if (freezeTimer === 0) freezeRaptors = false;
+                }
+                
+                // Update weapon timer
+                if (weaponTimer > 0) {
+                    weaponTimer--;
+                    const secondsLeft = Math.ceil(weaponTimer / 60);
+                    document.getElementById('weaponStatus').innerText = `🔫 ${currentWeapon}: ${secondsLeft}s`;
+                    if (weaponTimer === 0) {
+                        currentWeapon = 'normal';
+                        document.getElementById('weaponStatus').innerText = '';
+                    }
+                } else {
+                    document.getElementById('weaponStatus').innerText = '';
+                }
+                
+                // Danger indicator - check if any raptor is close
+                let dangerLevel = 0;
+                raptors.forEach(raptor => {
+                    let dx = raptor.x - human.x;
+                    let dy = raptor.y - human.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < 150) dangerLevel = Math.max(dangerLevel, (150 - distance) / 150);
+                });
+                
+                if (dangerLevel > 0.3) {
+                    let intensity = Math.floor(dangerLevel * 50);
+                    canvas.style.boxShadow = `inset 0 0 ${intensity}px ${intensity/2}px rgba(255, 0, 0, ${dangerLevel})`;
+                } else {
+                    canvas.style.boxShadow = 'none';
+                }
+                
+                // Spawn power-ups randomly
+                if (Math.random() < 0.002 && powerups.length < 3) {
+                    spawnPowerup();
+                }
+                
+                // Spawn weapon powerups rarely
+                if (Math.random() < 0.001 && weaponPowerups.length < 1) {
+                    spawnWeaponPowerup();
+                }
+            }
+        }
+
+        function saveScore() {
+            const name = prompt('Enter your name:');
+            topScores.push({ name, score, level });
+            topScores.sort((a, b) => b.score - a.score);
+            topScores = topScores.slice(0, 10);
+            localStorage.setItem('topScores', JSON.stringify(topScores));
+        }
+
+        function displayTopScores() {
+            const topScoresDiv = document.getElementById('topScores');
+            topScoresDiv.innerHTML = '<h2>Top 10 Scores</h2>';
+            topScores.forEach((entry, index) => {
+                topScoresDiv.innerHTML += `<p>${index + 1}. ${entry.name}: ${entry.score} (Level: ${entry.level})</p>`;
+            });
+        }
+        
+        function jumpToLevel(targetLevel) {
+            level = targetLevel;
+            score = getNextLevelScore(level - 1); // Set score to start of level
+            updateBackground(level);
+            
+            // Update speeds for current level
+            human.baseSpeed = 5 + (level - 1);
+            human.speed = human.baseSpeed;
+            
+            // Clear and respawn raptors at appropriate difficulty
+            raptors = [];
+            const raptorCount = 1 + Math.floor(level / 2);
+            for (let i = 0; i < raptorCount; i++) {
+                addRaptor();
+            }
+            
+            // Clear hazards so new ones spawn for the theme
+            hazards = [];
+            hazardSpawnTimer = 0;
+            
+            // Visual feedback
+            for (let i = 0; i < 30; i++) {
+                createParticle(human.x + human.size/2, human.y + human.size/2, '#00ffff');
+            }
+            
+            // Update UI
+            const nextScore = getNextLevelScore(level);
+            const progress = level < 100 ? ` | Next Level: ${nextScore}` : ' | MAX LEVEL';
+            document.getElementById('score').innerText = 'Score: ' + score + progress;
+        }
+
+        function gameLoop() {
+            if (!gameOver) {
+                if (!isPaused) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawHazards();
+                    drawPowerups();
+                    drawWeaponPowerups();
+                    drawBombs();
+                    drawBullets();
+                    drawHuman();
+                    drawRaptors();
+                    drawParticles();
+                    moveHuman();
+                    moveRaptors();
+                    updateBullets();
+                    updateBombs();
+                    updateHazards();
+                    checkCollision();
+                    updateScore();
+                }
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            // Pause toggle
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                if (gameStarted && !gameOver) {
+                    isPaused = !isPaused;
+                    document.getElementById('pauseMenu').style.display = isPaused ? 'block' : 'none';
+                    if (isPaused) {
+                        backgroundMusic.pause();
+                    } else {
+                        backgroundMusic.play();
+                    }
+                }
+                return;
+            }
+            
+            // CHEAT CODES for testing - Press number keys to jump to levels
+            if (gameStarted && !gameOver && !isPaused) {
+                if (e.key === '1') jumpToLevel(1);
+                else if (e.key === '2') jumpToLevel(5);  // Desert
+                else if (e.key === '3') jumpToLevel(10); // Arctic
+                else if (e.key === '4') jumpToLevel(15); // Volcano
+                else if (e.key === '5') jumpToLevel(20); // Night
+                else if (e.key === '6') jumpToLevel(25); // Swamp
+                else if (e.key === '7') jumpToLevel(30); // Canyon
+                else if (e.key === '8') jumpToLevel(40); // Storm
+                else if (e.key === '9') jumpToLevel(50); // Lava
+                else if (e.key === '0') jumpToLevel(75); // Void
+                else if (e.key === '-') jumpToLevel(100); // Rainbow
+            }
+            
+            // Dash ability
+            if (e.key === ' ' && dashCooldown === 0 && gameStarted && !isPaused) {
+                performDash();
+                e.preventDefault();
+                return;
+            }
+            
+            keys[e.key] = true;
+            if (!gameStarted) gameStarted = true;
+        });
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        function addRaptor() {
+            const size = 40;
+            const speed = 2 + level * 0.5;
+            const x = Math.random() * (canvas.width - size);
+            const y = Math.random() * (canvas.height - size);
+            raptors.push({ x, y, size, speed });
+        }
+
+        function addRaptors(level) {
+            const additionalRaptors = Math.floor(level / 10); // Add more raptors every 10 levels
+            for (let i = 0; i < additionalRaptors; i++) {
+                addRaptor();
+            }
+        }
+
+        function startGame() {
+            clearInterval(raptorInterval); // Clear any existing intervals
+            initGame(); // Reinitialize the game
+            raptorInterval = setInterval(addRaptor, 2000);
+            gameLoop();
+        }
+        
+        function performDash() {
+            // Determine dash direction based on movement keys
+            let dashX = 0, dashY = 0;
+            
+            if (keys['ArrowUp'] || keys['w'] || keys['W']) dashY = -1;
+            if (keys['ArrowDown'] || keys['s'] || keys['S']) dashY = 1;
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) dashX = -1;
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) dashX = 1;
+            
+            // Default forward dash if no direction pressed
+            if (dashX === 0 && dashY === 0) dashX = 1;
+            
+            // Normalize diagonal dashes
+            if (dashX !== 0 && dashY !== 0) {
+                dashX *= 0.707;
+                dashY *= 0.707;
+            }
+            
+            // Perform dash
+            human.x += dashX * dashDistance;
+            human.y += dashY * dashDistance;
+            
+            // Keep within bounds
+            if (human.x < 0) human.x = 0;
+            if (human.x > canvas.width - human.size) human.x = canvas.width - human.size;
+            if (human.y < 0) human.y = 0;
+            if (human.y > canvas.height - human.size) human.y = canvas.height - human.size;
+            
+            // Set cooldown
+            dashCooldown = maxDashCooldown;
+            
+            // Visual effect
+            for (let i = 0; i < 10; i++) {
+                createParticle(human.x + human.size/2, human.y + human.size/2, '#00ffff');
+            }
+        }
+        
+        function spawnPowerup() {
+            const types = ['invincible', 'speed', 'freeze'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            const x = Math.random() * (canvas.width - 30);
+            const y = Math.random() * (canvas.height - 30);
+            powerups.push({ x, y, type });
+        }
+        
+        function spawnWeaponPowerup() {
+            const pattern = weaponPatterns[Math.floor(Math.random() * weaponPatterns.length)];
+            const x = Math.random() * (canvas.width - 30);
+            const y = Math.random() * (canvas.height - 30);
+            weaponPowerups.push({ x, y, pattern });
+        }
+        
+        function drawPowerups() {
+            powerups.forEach(powerup => {
+                ctx.save();
+                ctx.globalAlpha = 0.8;
+                
+                if (powerup.type === 'invincible') {
+                    ctx.fillStyle = '#ffff00';
+                    ctx.strokeStyle = '#ff8800';
+                } else if (powerup.type === 'speed') {
+                    ctx.fillStyle = '#00ffff';
+                    ctx.strokeStyle = '#0088ff';
+                } else if (powerup.type === 'freeze') {
+                    ctx.fillStyle = '#88ffff';
+                    ctx.strokeStyle = '#4444ff';
+                }
+                
+                ctx.beginPath();
+                ctx.arc(powerup.x + 15, powerup.y + 15, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw symbol
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (powerup.type === 'invincible') ctx.fillText('S', powerup.x + 15, powerup.y + 15);
+                else if (powerup.type === 'speed') ctx.fillText('⚡', powerup.x + 15, powerup.y + 15);
+                else if (powerup.type === 'freeze') ctx.fillText('❄', powerup.x + 15, powerup.y + 15);
+                
+                ctx.restore();
+            });
+        }
+        
+        function drawWeaponPowerups() {
+            weaponPowerups.forEach(wp => {
+                ctx.save();
+                ctx.globalAlpha = 0.9;
+                
+                // Pulsing background
+                const pulseSize = 25 + Math.sin(Date.now() / 200) * 5;
+                ctx.fillStyle = wp.pattern.color;
+                ctx.beginPath();
+                ctx.arc(wp.x + 15, wp.y + 15, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Icon
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(wp.pattern.icon, wp.x + 15, wp.y + 15);
+                
+                // Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px Arial';
+                ctx.fillText(wp.pattern.name, wp.x + 15, wp.y + 40);
+                
+                ctx.restore();
+            });
+        }
+
+        function activatePowerup(type) {
+            if (type === 'invincible') {
+                invincible = true;
+                invincibleTimer = 300; // 5 seconds at 60fps
+            } else if (type === 'speed') {
+                speedBoost = true;
+                speedBoostTimer = 300;
+                human.speed = human.baseSpeed * 2;
+            } else if (type === 'freeze') {
+                freezeRaptors = true;
+                freezeTimer = 180; // 3 seconds
+            }
+        }
+        
+        function createParticle(x, y, color = '#ff0000') {
+            particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 30,
+                color: color
+            });
+        }
+        
+        function drawParticles() {
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.3; // Gravity
+                p.life--;
+                
+                if (p.life > 0) {
+                    ctx.globalAlpha = p.life / 30;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        document.getElementById('startOver').addEventListener('click', startGame);
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            document.getElementById('pauseMenu').style.display = 'none';
+            backgroundMusic.play();
+        });
+
+        initGame();
+        startGame();
+    </script>
+</body>
+</html>
