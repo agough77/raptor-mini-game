@@ -76,7 +76,6 @@ The game supports custom background images for each theme. Place JPEG images in 
 - `void.jpeg`
 - `rainbow.jpeg`
 
-Check `IMAGE_PROMPTS.txt` for AI image generation prompts to create these backgrounds using tools like Bing Image Creator.
 
 ## 🏆 Scoring System
 - Survive to earn points
