@@ -273,7 +273,6 @@
             <div id="startHighScoresList" style="font-size: clamp(14px, 3vw, 18px);"></div>
         </div>
         <button id="startButton">START MISSION</button>
-        <button id="testBossButton" style="font-size: clamp(16px, 4vw, 20px); padding: 10px 30px; background: linear-gradient(45deg, #ff0000, #ff4444); color: white; border: none; border-radius: 10px; cursor: pointer; margin-top: 10px; box-shadow: 0 0 20px rgba(255,0,0,0.6); transition: all 0.2s; font-weight: bold;">TEST BOSS MODE</button>
     </div>
     
     <div id="ui">
@@ -1804,12 +1803,6 @@
         }
         
         document.getElementById('startButton').addEventListener('click', startGame);
-        document.getElementById('testBossButton').addEventListener('click', () => {
-            startGame();
-            // Trigger boss mode immediately for testing
-            bossActive = true;
-            spawnBoss();
-        });
         document.getElementById('restartButton').addEventListener('click', () => {
             // Save score when restarting
             const playerName = document.getElementById('playerName').value;
