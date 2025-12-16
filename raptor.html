@@ -128,9 +128,17 @@
         raptorImg.src = 'raptor.png';
         raptorImg.onload = () => console.log('Raptor image loaded');
 
-        const collisionSound = new Audio('collision.mp3');
-        const backgroundMusic = new Audio('background.mp3');
-        backgroundMusic.loop = true;
+        // Audio (optional - will fail silently if files don't exist)
+        let collisionSound, backgroundMusic;
+        try {
+            collisionSound = new Audio('collision.mp3');
+            backgroundMusic = new Audio('background.mp3');
+            backgroundMusic.loop = true;
+        } catch (e) {
+            console.log('Audio files not found - game will run without sound');
+            collisionSound = { play: () => {}, pause: () => {} };
+            backgroundMusic = { play: () => {}, pause: () => {}, loop: false };
+        }
         
         // Detect mobile device
         function detectMobile() {
