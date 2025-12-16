@@ -7,53 +7,60 @@
     <style>
         body { margin: 0; overflow: hidden; }
         canvas { display: block; margin: auto; background: url('jungle.png') no-repeat; background-size: 100% 100%; width: 100vw; height: 100vh; transition: box-shadow 0.3s, background 1s ease; }
-        #score { color: white; position: absolute; top: 10px; left: 10px; font-size: 20px; text-shadow: 2px 2px 4px black; }
-        #level { color: white; position: absolute; top: 40px; left: 10px; font-size: 20px; text-shadow: 2px 2px 4px black; }
-        #topScores { color: white; position: absolute; top: 70px; left: 10px; font-size: 20px; background-color: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; }
-        #startOver { display: none; margin-top: 20px; font-size: 20px; padding: 10px; background-color: white; border: none; cursor: pointer; border-radius: 5px; }
-        #finalScore { display: none; margin-bottom: 20px; font-size: 20px; color: white; }
+        #score { color: white; position: absolute; top: 5px; left: 5px; font-size: clamp(14px, 3vw, 20px); text-shadow: 2px 2px 4px black; }
+        #level { color: white; position: absolute; top: calc(5px + clamp(20px, 4vw, 30px)); left: 5px; font-size: clamp(14px, 3vw, 20px); text-shadow: 2px 2px 4px black; }
+        #topScores { color: white; position: absolute; top: calc(5px + clamp(40px, 8vw, 60px)); left: 5px; font-size: clamp(12px, 2.5vw, 20px); background-color: rgba(0,0,0,0.7); padding: clamp(5px, 1.5vw, 10px); border-radius: 5px; }
+        #startOver { display: none; margin-top: 20px; font-size: clamp(16px, 3vw, 20px); padding: 10px; background-color: white; border: none; cursor: pointer; border-radius: 5px; }
+        #finalScore { display: none; margin-bottom: 20px; font-size: clamp(16px, 3vw, 20px); color: white; }
         #gameOverScreen { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;}
         
         /* New UI Elements */
-        #staminaBar { position: absolute; top: 10px; right: 10px; width: 200px; height: 20px; background-color: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 10px; overflow: hidden; }
+        #staminaBar { position: absolute; top: 5px; right: 5px; width: clamp(120px, 25vw, 200px); height: clamp(15px, 3vw, 20px); background-color: rgba(0,0,0,0.5); border: 2px solid white; border-radius: 10px; overflow: hidden; }
         #staminaFill { height: 100%; width: 100%; background: linear-gradient(90deg, #00ff00, #ffff00); transition: width 0.1s; }
-        #staminaLabel { color: white; position: absolute; top: 35px; right: 10px; font-size: 14px; text-shadow: 2px 2px 4px black; }
+        #staminaLabel { color: white; position: absolute; top: calc(5px + clamp(20px, 4vw, 30px)); right: 5px; font-size: clamp(10px, 2vw, 14px); text-shadow: 2px 2px 4px black; }
         
-        #dashCooldown { position: absolute; top: 60px; right: 10px; width: 200px; height: 15px; background-color: rgba(0,0,0,0.5); border: 2px solid cyan; border-radius: 10px; overflow: hidden; }
+        #dashCooldown { position: absolute; top: calc(5px + clamp(40px, 8vw, 60px)); right: 5px; width: clamp(120px, 25vw, 200px); height: clamp(12px, 2.5vw, 15px); background-color: rgba(0,0,0,0.5); border: 2px solid cyan; border-radius: 10px; overflow: hidden; }
         #dashFill { height: 100%; width: 100%; background: linear-gradient(90deg, #00ffff, #0080ff); transition: width 0.1s; }
-        #dashLabel { color: cyan; position: absolute; top: 80px; right: 10px; font-size: 14px; text-shadow: 2px 2px 4px black; }
+        #dashLabel { color: cyan; position: absolute; top: calc(5px + clamp(60px, 11vw, 80px)); right: 5px; font-size: clamp(10px, 2vw, 14px); text-shadow: 2px 2px 4px black; }
         
-        #ammoCounter { color: white; position: absolute; top: 100px; right: 10px; font-size: 18px; text-shadow: 2px 2px 4px black; font-weight: bold; }
-        #bombTimer { color: orange; position: absolute; top: 125px; right: 10px; font-size: 16px; text-shadow: 2px 2px 4px black; }
+        #ammoCounter { color: white; position: absolute; top: calc(5px + clamp(80px, 14vw, 100px)); right: 5px; font-size: clamp(12px, 2.5vw, 18px); text-shadow: 2px 2px 4px black; font-weight: bold; }
+        #bombTimer { color: orange; position: absolute; top: calc(5px + clamp(100px, 17vw, 125px)); right: 5px; font-size: clamp(11px, 2.2vw, 16px); text-shadow: 2px 2px 4px black; }
         
-        #pauseMenu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0,0,0,0.9); color: white; padding: 40px; border-radius: 15px; text-align: center; border: 3px solid white; }
-        #pauseMenu h2 { margin-top: 0; font-size: 36px; }
-        #pauseMenu p { font-size: 18px; margin: 10px 0; }
-        #resumeBtn { margin-top: 20px; font-size: 20px; padding: 10px 30px; background-color: #00ff00; border: none; cursor: pointer; border-radius: 5px; }
+        #pauseMenu { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0,0,0,0.9); color: white; padding: clamp(20px, 5vw, 40px); border-radius: 15px; text-align: center; border: 3px solid white; max-width: 90vw; }
+        #pauseMenu h2 { margin-top: 0; font-size: clamp(24px, 6vw, 36px); }
+        #pauseMenu p { font-size: clamp(14px, 3vw, 18px); margin: 10px 0; }
+        #resumeBtn { margin-top: 20px; font-size: clamp(16px, 3vw, 20px); padding: 10px 30px; background-color: #00ff00; border: none; cursor: pointer; border-radius: 5px; }
         
         .powerup { position: absolute; width: 30px; height: 30px; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
         
         .particle { position: absolute; width: 5px; height: 5px; background-color: #ff0000; border-radius: 50%; pointer-events: none; }
         
-        #controls { color: white; position: absolute; bottom: 10px; right: 10px; font-size: 12px; text-align: right; background-color: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
+        #controls { color: white; position: absolute; bottom: 5px; right: 5px; font-size: clamp(9px, 1.8vw, 12px); text-align: right; background-color: rgba(0,0,0,0.5); padding: clamp(5px, 1.5vw, 10px); border-radius: 5px; }
         
-        #startScreen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        #startScreen h1 { color: #ff6600; font-size: 72px; margin: 20px; text-shadow: 4px 4px 8px black; }
-        #startScreen p { color: white; font-size: 24px; margin: 10px; }
-        #startButton { font-size: 36px; padding: 20px 60px; background: linear-gradient(45deg, #ff6600, #ff0000); color: white; border: none; border-radius: 15px; cursor: pointer; margin-top: 30px; box-shadow: 0 0 20px rgba(255,102,0,0.5); transition: transform 0.2s; }
+        #startScreen { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+        #startScreen h1 { color: #ff6600; font-size: clamp(36px, 10vw, 72px); margin: 20px; text-shadow: 4px 4px 8px black; text-align: center; }
+        #startScreen p { color: white; font-size: clamp(14px, 3.5vw, 24px); margin: 10px; text-align: center; }
+        #startButton { font-size: clamp(20px, 5vw, 36px); padding: clamp(15px, 3vw, 20px) clamp(30px, 8vw, 60px); background: linear-gradient(45deg, #ff6600, #ff0000); color: white; border: none; border-radius: 15px; cursor: pointer; margin-top: 30px; box-shadow: 0 0 20px rgba(255,102,0,0.5); transition: transform 0.2s; }
         #startButton:hover { transform: scale(1.1); }
+        #startButton:active { transform: scale(0.95); }
         #startScreen.hidden { display: none; }
         
         /* Mobile touch controls */
-        #mobileControls { display: none; position: absolute; bottom: 20px; left: 20px; z-index: 100; }
-        #joystick { position: relative; width: 150px; height: 150px; background: rgba(255,255,255,0.2); border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); }
-        #joystickKnob { position: absolute; width: 60px; height: 60px; background: rgba(255,255,255,0.6); border-radius: 50%; top: 45px; left: 45px; touch-action: none; }
-        #dashButton { position: absolute; bottom: 20px; right: 20px; width: 100px; height: 100px; background: rgba(0,255,255,0.6); border-radius: 50%; border: 3px solid rgba(0,255,255,0.8); display: none; font-size: 14px; color: white; font-weight: bold; text-align: center; line-height: 100px; z-index: 100; }
-        #sprintButton { position: absolute; bottom: 140px; right: 20px; width: 80px; height: 80px; background: rgba(255,255,0,0.6); border-radius: 50%; border: 3px solid rgba(255,255,0,0.8); display: none; font-size: 12px; color: white; font-weight: bold; text-align: center; line-height: 80px; z-index: 100; }
+        #mobileControls { display: none; position: absolute; bottom: 10px; left: 10px; z-index: 100; }
+        #joystick { position: relative; width: clamp(100px, 20vw, 150px); height: clamp(100px, 20vw, 150px); background: rgba(255,255,255,0.2); border-radius: 50%; border: 3px solid rgba(255,255,255,0.5); }
+        #joystickKnob { position: absolute; width: 40%; height: 40%; background: rgba(255,255,255,0.6); border-radius: 50%; top: 30%; left: 30%; touch-action: none; }
+        #dashButton { position: absolute; bottom: 10px; right: 10px; width: clamp(70px, 15vw, 100px); height: clamp(70px, 15vw, 100px); background: rgba(0,255,255,0.6); border-radius: 50%; border: 3px solid rgba(0,255,255,0.8); display: none; font-size: clamp(10px, 2vw, 14px); color: white; font-weight: bold; text-align: center; line-height: clamp(70px, 15vw, 100px); z-index: 100; }
+        #sprintButton { position: absolute; bottom: calc(10px + clamp(80px, 17vw, 120px)); right: 10px; width: clamp(60px, 12vw, 80px); height: clamp(60px, 12vw, 80px); background: rgba(255,255,0,0.6); border-radius: 50%; border: 3px solid rgba(255,255,0,0.8); display: none; font-size: clamp(9px, 1.8vw, 12px); color: white; font-weight: bold; text-align: center; line-height: clamp(60px, 12vw, 80px); z-index: 100; }
         
         .bullet { position: absolute; width: 5px; height: 5px; background-color: yellow; border-radius: 50%; box-shadow: 0 0 5px yellow; }
         .explosion { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,150,0,0.8), rgba(255,0,0,0.4), transparent); pointer-events: none; }
+        
+        #weaponStatus { color: yellow; position: absolute; top: calc(5px + clamp(120px, 20vw, 150px)); right: 5px; font-size: clamp(12px, 2.5vw, 18px); text-shadow: 2px 2px 4px black; font-weight: bold; }
+        
+        @media (max-width: 600px) {
+            #staminaLabel, #dashLabel { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -62,9 +69,9 @@
         <p>Survive the prehistoric predators!</p>
         <p>11 unique environments • 10 weapon types • Endless action</p>
         <button id="startButton">START GAME</button>
-        <div style="margin-top: 40px; color: #888; font-size: 14px; text-align: center;">
-            <p>WASD/Arrows: Move | Shift: Sprint | Space: Dash</p>
-            <p>Auto-shoot enabled • Collect powerups to survive!</p>
+        <div style="margin-top: clamp(20px, 5vw, 40px); color: #888; font-size: clamp(10px, 2vw, 14px); text-align: center; padding: 0 10px;">
+            <p style="margin: 5px 0;">WASD/Arrows: Move | Shift: Sprint | Space: Dash</p>
+            <p style="margin: 5px 0;">Auto-shoot enabled • Collect powerups to survive!</p>
         </div>
     </div>
     
@@ -80,7 +87,7 @@
     
     <div id="ammoCounter">🔫 Ammo: ∞</div>
     <div id="bombTimer">💣 Next Bomb: --s</div>
-    <div id="weaponStatus" style="color: yellow; position: absolute; top: 150px; right: 10px; font-size: 18px; text-shadow: 2px 2px 4px black; font-weight: bold;"></div>
+    <div id="weaponStatus"></div>
     
     <div id="controls">
         <strong>Controls:</strong><br>
