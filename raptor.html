@@ -150,23 +150,6 @@
         backgroundMusic.onerror = () => console.log('background.mp3 not found - running without music');
         */
         
-        // Detect mobile device
-        function detectMobile() {
-            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()) || 
-                   ('ontouchstart' in window) || 
-                   (navigator.maxTouchPoints > 0);
-        }
-        
-        isMobile = detectMobile();
-        
-        if (isMobile) {
-            document.getElementById('mobileControls').style.display = 'block';
-            document.getElementById('dashButton').style.display = 'block';
-            document.getElementById('sprintButton').style.display = 'block';
-            document.getElementById('controls').style.display = 'none';
-        }
-
         let human, raptors, score, topScores, gameOver, raptorInterval, gameStarted, level;
         const keys = {};
         
@@ -206,6 +189,23 @@
         let joystickActive = false;
         let joystickVector = { x: 0, y: 0 };
         let touchSprint = false;
+        
+        // Detect mobile device
+        function detectMobile() {
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+        }
+        
+        isMobile = detectMobile();
+        
+        if (isMobile) {
+            document.getElementById('mobileControls').style.display = 'block';
+            document.getElementById('dashButton').style.display = 'block';
+            document.getElementById('sprintButton').style.display = 'block';
+            document.getElementById('controls').style.display = 'none';
+        }
         
         const weaponPatterns = [
             { name: 'Star', icon: '⭐', color: '#ffff00', duration: 300 },
