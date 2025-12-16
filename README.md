@@ -97,7 +97,6 @@ The game supports custom background images for each theme. Place JPEG images in 
 ## 📝 Files
 - `raptor.html` - Main game file (playable standalone)
 - `raptor_original.html` - Original version backup
-- `IMAGE_PROMPTS.txt` - AI prompts for background generation
 - `README.md` - This file
 
 ## 🎯 Tips for Success
