@@ -117,7 +117,13 @@ Check `IMAGE_PROMPTS.txt` for AI image generation prompts to create these backgr
 - Mobile touch controls
 
 ## 📜 License
-Free to use and modify for personal and educational purposes.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This means you are free to:
+- ✅ Use the code commercially
+- ✅ Modify and distribute
+- ✅ Use privately
+- ✅ Sublicense
 
 ## 🎮 Play Now!
 Just open `raptor.html` in your browser and survive as long as you can!
