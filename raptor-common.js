@@ -138,12 +138,14 @@
         heartbeat: () => { tone('sine', 75, 45, 0.12, 0.3); tone('sine', 70, 40, 0.12, 0.22, 0.17); },
         spawn: () => tone('triangle', 180, 260, 0.12, 0.04),
         whistle: () => tone('sine', 1400, 380, 1.5, 0.05),
+        growl: () => { tone('sawtooth', 150, 85, 0.22, 0.07); noise(0.18, 0.05, 700); },
+        spit: () => tone('triangle', 500, 900, 0.08, 0.04),
         sizzle: () => noise(0.12, 0.04, 5000, 2000),
         click: () => tone('square', 620, 620, 0.03, 0.04)
     };
 
     // Minimum milliseconds between repeats so rapid-fire sounds don't stack into noise.
-    const throttle = { shoot: 70, hit: 45, kill: 35, spawn: 120, sizzle: 160, pickup: 60 };
+    const throttle = { shoot: 70, hit: 45, kill: 35, spawn: 120, sizzle: 160, pickup: 60, growl: 150, spit: 90 };
 
     function play(name) {
         if (!settings.sound || !actx || actx.state !== 'running' || !sounds[name]) return;

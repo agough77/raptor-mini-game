@@ -24,6 +24,8 @@ Your gun fires automatically at the nearest raptor.
 
 Survive as long as you can. Raptors are telegraphed with a red **!** before they appear, so they never spawn on top of you.
 
+**Watch for lunges:** when a raptor gets close it crouches and flashes red, then leaps in a straight line. The direction is locked when it crouches, so sidestep or dash.
+
 ### 🌍 11 Themed Environments
 | Levels | Theme | Hazard |
 |---|---|---|
@@ -40,7 +42,7 @@ Survive as long as you can. Raptors are telegraphed with a red **!** before they
 | 100+ | Rainbow | Rainbow rings restore stamina and give bonus points |
 
 ### ⚡ Power-ups
-- **🛡️ Shield** (5s): raptors that touch you are destroyed
+- **🛡️ Shield** (4s): raptors that touch you are destroyed
 - **⚡ Speed** (5s): move 50% faster
 - **❄️ Freeze** (3s): raptors stop, and touching one shatters it
 
@@ -48,24 +50,25 @@ Survive as long as you can. Raptors are telegraphed with a red **!** before they
 Star, Spiral, Shotgun, Laser, Circle, X-Pattern, Wave, Rapid, Sniper (pierces through a line of raptors), Chaos.
 
 ### 💣 Bombs
-A bomb falls every 15 seconds. Its landing zone is marked on the ground, so lure raptors into it. Bombs don't hurt you.
+A bomb falls every 20 seconds. Its landing zone is marked on the ground, so lure raptors into it. Bombs don't hurt you.
 
 ### 🏆 Scoring
 - Survival: 1 point per frame (60 per second)
 - Kills: 30 points, bomb kills 20 points
 - **Combos**: chain kills within 2.5 seconds. 8+ kills doubles points, 16+ triples them.
-- Each level takes a little longer than the last. Raptors get faster, come in bigger packs, and from level 3 some take two hits.
+- Each level takes a little longer than the last. Raptors get faster (late on they outrun you unless you sprint), come in bigger packs, and from level 2 some take two hits (three from level 12).
 
 ### 🧪 Testing levels
 Keys **1-9, 0, -** jump to each theme (levels 1, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100). Runs that use them are marked as practice, and their scores and achievements aren't saved.
 
 ## 🚀 Raptor Destroy
 
-- Raptors attack in 3-raptor formations that weave, dive and loop. Get close and they'll chase you, but they're always a little slower than you.
+- Raptors attack in 3-raptor formations that weave, dive and loop. Get close and they'll chase you at almost your speed.
+- **Spitters**: from wave 2, some raptors spit glowing green shots at you (10 damage). More of them show up each wave.
 - **Waves** advance by kills. Themes change as you progress, each with its own hazard.
 - **Power levels**: kills charge your Power bar. Each full bar raises your power level (up to 5) for faster fire and more damage. Getting hit drains the bar, and at empty it knocks you down a level.
 - **Weapons**: Double, Triple, Spread, Star, Spiral, Circle, Wave, Laser and Chaos drop from raptors and from the sky. They last until you pick up another.
-- **Alpha packs**: every 10th wave, three huge Alpha raptors attack. Watch for the red charge line and dash out of the way. Beating a pack heals 40 HP.
+- **Alpha packs**: every 10th wave, three huge Alpha raptors attack. They fire spreads of spit, and charge along a red line, so dash out of the way. Beating a pack heals 25 HP.
 - **Combos**: 10+ kills double points, 25+ triple them. Taking damage breaks your combo.
 
 ## ✨ Both games

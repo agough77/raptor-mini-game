@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Raptor Destroy</title>
-    <link rel="stylesheet" href="raptor-ui.css?v=2">
+    <link rel="stylesheet" href="raptor-ui.css?v=3">
     <style>
         :root { --accent: #19e3ff; --accent-2: #2a6bff; }
         .hidden { display: none !important; }
@@ -132,7 +132,7 @@
         </div>
     </div>
 
-    <script src="raptor-common.js?v=2"></script>
+    <script src="raptor-common.js?v=3"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -205,7 +205,7 @@
         const FIRE_RATES = [10, 9, 8, 7, 6];
         // Kills needed to clear each wave. Based on kills (not score) so combos don't skip waves.
         const killsForWave = n => 15 + 5 * (n - 1);
-        const hpScale = () => 1 + 0.1 * (run.wave - 1);
+        const hpScale = () => 1 + 0.14 * (run.wave - 1);
         const multiplier = () => run.combo >= 25 ? 3 : run.combo >= 10 ? 2 : 1;
 
         // ---------- Progression ----------
@@ -250,7 +250,7 @@
                 weapon: 'single', weaponsUsed: new Set(['single']),
                 invincible: 0, speed: 0, freeze: 0,
                 stamina: 100, exhausted: false, dashCooldown: 0,
-                enemies: [], bullets: [], powerups: [], hazards: [], particles: [], waves: [],
+                enemies: [], bullets: [], spits: [], powerups: [], hazards: [], particles: [], waves: [],
                 waveKills: 0, damagedThisWave: false,
                 spawnTimer: 60, burstsLeft: 5, groupCooldown: 0,
                 powerupTimer: 360, hazardTimer: 300, lavaTick: 0,
@@ -332,8 +332,11 @@
                     x: centerX + (i - 1) * 60, y: -50 - Math.abs(i - 1) * 30,
                     vx: 0, vy: 0, size: type.size, pattern,
                     phase: Math.random() * Math.PI * 2,
-                    baseSpeed: 1.8 + run.wave * 0.08,
-                    alwaysChase: Math.random() < 0.4,
+                    baseSpeed: 2.2 + run.wave * 0.1,
+                    alwaysChase: Math.random() < 0.5,
+                    // Spitters lob aimed shots at you from wave 2 on.
+                    shooter: run.wave >= 2 && Math.random() < Math.min(0.6, 0.15 + run.wave * 0.04),
+                    shootCd: 60 + Math.random() * 120,
                     hp, maxHp: hp, points: type.points,
                     flash: 0, facing: 1, tilt: 0
                 });
@@ -341,13 +344,13 @@
         }
 
         function spawnBosses() {
-            const hp = 250 + run.wave * 35;
+            const hp = 300 + run.wave * 45;
             for (let i = 0; i < 3; i++) {
                 run.enemies.push({
                     x: W / 4 * (i + 1), y: -110 - i * 50,
                     vx: 0, vy: 0, size: 92, isBoss: true,
                     hp, maxHp: hp, points: 2000,
-                    mode: 'enter', modeTimer: 60 + i * 40, chargeX: 0, chargeY: 0,
+                    mode: 'enter', modeTimer: 60 + i * 40, chargeX: 0, chargeY: 0, shootCd: 90 + i * 30,
                     flash: 0, facing: 1, tilt: 0, phase: Math.random() * 6
                 });
             }
@@ -356,6 +359,7 @@
         function startBossIntro() {
             run.bossActive = true;
             run.bossIntro = 150;
+            run.spits = [];
             run.enemies.forEach(e => {
                 e.fleeing = true;
                 e.fleeDir = e.x < W / 2 ? -1 : 1;
@@ -379,6 +383,27 @@
                 h.vx = (Math.random() - 0.5) * 1.5;
             }
             run.hazards.push(h);
+        }
+
+        function spit(x, y, angle, speed) {
+            run.spits.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0 });
+            RC.play('spit');
+        }
+
+        function updateSpits() {
+            run.spits = run.spits.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.age++;
+                if (p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) return false;
+                if (Math.hypot(p.x - player.x, p.y - player.y) < player.size * 0.28 + 6) {
+                    if (player.invuln > 0 || run.invincible > 0) return player.invuln > 0 && run.invincible <= 0;
+                    damagePlayer(10, p.x - p.vx, p.y - p.vy);
+                    burst(p.x, p.y, '#9dff3d', 10, 3);
+                    return false;
+                }
+                return true;
+            });
         }
 
         function spawnPowerup(type, x, y) {
@@ -430,7 +455,7 @@
 
             if (!e.isBoss) {
                 const roll = Math.random();
-                if (roll < 0.02) spawnPowerup('health', e.x, e.y);
+                if (roll < 0.012) spawnPowerup('health', e.x, e.y);
                 else if (roll < 0.05) spawnPowerup(['invincible', 'speed', 'freeze'][Math.floor(Math.random() * 3)], e.x, e.y);
                 else if (roll < 0.075) spawnPowerup(WEAPON_DROPS[Math.floor(Math.random() * WEAPON_DROPS.length)], e.x, e.y);
             } else {
@@ -448,10 +473,10 @@
         function bossDefeated() {
             run.bossActive = false;
             run.bossesBeaten++;
-            run.health = Math.min(100, run.health + 40);
+            run.health = Math.min(100, run.health + 25);
             run.groupCooldown = 90;
             run.burstsLeft = burstsForWave();
-            banner('PACK DOWN!', '+40 HP', '#5dff7a');
+            banner('PACK DOWN!', '+25 HP', '#5dff7a');
             RC.play('levelup');
             unlock('boss');
         }
@@ -720,7 +745,12 @@
                     }
                     break;
                 case 'stalk': {
-                    const speed = Math.min(2.2 + run.wave * 0.03, 3.4);
+                    const speed = Math.min(2.6 + run.wave * 0.04, 4.2);
+                    if (--e.shootCd <= 0) {
+                        e.shootCd = Math.max(45, 90 - run.wave);
+                        const a = Math.atan2(dy, dx);
+                        for (let i = -2; i <= 2; i++) spit(e.x, e.y, a + i * 0.22, 4.5);
+                    }
                     e.vx += (dx / d * speed - e.vx) * 0.05;
                     e.vy += (dy / d * speed - e.vy) * 0.05;
                     e.x += e.vx;
@@ -769,7 +799,7 @@
         }
 
         function updateEnemies() {
-            const chaseCap = PLAYER_SPEED * 0.85;
+            const chaseCap = PLAYER_SPEED * 0.95;
             for (const e of run.enemies) {
                 if (e.dead) continue;
                 if (e.flash > 0) e.flash--;
@@ -787,7 +817,11 @@
                 const dx = player.x - e.x, dy = player.y - e.y;
                 const d = Math.hypot(dx, dy) || 1;
                 const prevX = e.x;
-                if (d < 300 || e.alwaysChase) {
+                if (e.shooter && e.y > 0 && --e.shootCd <= 0) {
+                    e.shootCd = Math.max(70, 170 - run.wave * 4) + Math.random() * 80;
+                    spit(e.x, e.y, Math.atan2(dy, dx), Math.min(6.5, 3.8 + run.wave * 0.1));
+                }
+                if (d < 340 || e.alwaysChase) {
                     // Chasers are always a little slower than you, so you can outmanoeuvre them.
                     const speed = Math.min(chaseCap, e.baseSpeed + 1.5 + run.wave * 0.15);
                     e.vx += (dx / d * speed - e.vx) * 0.1;
@@ -853,7 +887,7 @@
                     } else if (run.invincible > 0) {
                         if (!e.isBoss) killEnemy(e);
                     } else if (player.invuln <= 0) {
-                        damagePlayer(e.isBoss ? (e.mode === 'charge' ? 25 : 15) : 15, e.x, e.y);
+                        damagePlayer(e.isBoss ? (e.mode === 'charge' ? 30 : 20) : 20, e.x, e.y);
                         if (!e.isBoss) {
                             e.hp -= 40;
                             e.flash = 6;
@@ -891,7 +925,7 @@
         }
 
         function burstsForWave() {
-            return Math.min(14, 4 + run.wave);
+            return Math.min(16, 5 + run.wave);
         }
 
         function updateSpawning() {
@@ -908,12 +942,12 @@
                 return;
             }
             if (--run.spawnTimer > 0) return;
-            if (run.enemies.length < 45) spawnFormation();
+            if (run.enemies.length < 50) spawnFormation();
             run.burstsLeft--;
-            run.spawnTimer = Math.max(18, 45 - run.wave * 2);
+            run.spawnTimer = Math.max(14, 38 - run.wave * 2);
             if (run.burstsLeft <= 0) {
                 run.burstsLeft = burstsForWave();
-                run.groupCooldown = Math.max(60, 150 - run.wave * 5);
+                run.groupCooldown = Math.max(45, 120 - run.wave * 5);
             }
         }
 
@@ -922,7 +956,7 @@
                 run.powerupTimer = run.bossActive ? 360 : 480;
                 const roll = Math.random();
                 let type;
-                if (roll < (run.bossActive ? 0.5 : 0.25)) type = 'health';
+                if (roll < (run.bossActive ? 0.35 : 0.15)) type = 'health';
                 else if (roll < 0.8) type = WEAPON_DROPS[Math.floor(Math.random() * WEAPON_DROPS.length)];
                 else type = ['invincible', 'speed', 'freeze'][Math.floor(Math.random() * 3)];
                 spawnPowerup(type, 40 + Math.random() * (W - 80), -20);
@@ -964,6 +998,7 @@
             updateSpawning();
             updateEnemies();
             updateBullets();
+            updateSpits();
             updatePowerups();
             updateCollisions();
             if (state !== 'playing') return;
@@ -1244,6 +1279,26 @@
             ctx.restore();
         }
 
+        function drawSpits() {
+            ctx.save();
+            run.spits.forEach(p => {
+                const r = 6 + Math.sin(p.age * 0.4) * 1.2;
+                ctx.fillStyle = 'rgba(140,255,60,0.35)';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#9dff3d';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#eaffd0';
+                ctx.beginPath();
+                ctx.arc(p.x - 2, p.y - 2, r * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+        }
+
         function drawBullets() {
             ctx.save();
             ctx.globalCompositeOperation = 'lighter';
@@ -1358,6 +1413,7 @@
                 drawBullets();
                 run.enemies.forEach(drawEnemy);
                 if (state === 'playing' || state === 'paused') drawPlayer();
+                drawSpits();
                 run.hazards.forEach(h => { if (h.type === 'fog') drawHazard(h); });
                 drawEffects();
                 floaters.draw(ctx);
