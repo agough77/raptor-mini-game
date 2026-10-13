@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Raptor Chase</title>
-    <link rel="stylesheet" href="raptor-ui.css?v=3">
+    <link rel="stylesheet" href="raptor-ui.css?v=4">
     <style>
         :root { --accent: #ff7a1a; --accent-2: #ff2d2d; }
         .hidden { display: none !important; }
@@ -60,13 +60,19 @@
             <h1 class="title">🦖 RAPTOR CHASE</h1>
             <p class="tagline">Outrun, outgun and outlast the pack across 11 deadly lands.</p>
             <div class="best-row" id="menuChips"></div>
+            <div class="difficulty">
+                <button class="diff-btn" data-difficulty="easy">Easy</button>
+                <button class="diff-btn" data-difficulty="hard">Hard</button>
+                <button class="diff-btn" data-difficulty="insane">Yep, Try This 💀</button>
+            </div>
+            <p class="note" id="difficultyNote"></p>
             <div class="btn-row"><button class="btn big" id="startButton">START GAME</button></div>
             <div class="keys" id="menuKeys">
                 <kbd>WASD</kbd> / <kbd>Arrows</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> dash · <kbd>P</kbd> pause · <kbd>M</kbd> mute<br>
                 Your gun fires on its own. Grab power-ups, and lure raptors into bomb blasts and lava.
             </div>
             <div class="columns">
-                <div class="card"><h3>Top 10</h3><ol class="scores" id="menuScores"></ol></div>
+                <div class="card"><h3 id="menuBoardTitle">Top 10</h3><ol class="scores" id="menuScores"></ol></div>
                 <div class="card"><h3>Achievements <span id="achCount"></span></h3><div class="achievements" id="menuAchievements"></div></div>
             </div>
             <div class="btn-row">
@@ -109,11 +115,11 @@
                 <button class="btn big" id="againBtn">PLAY AGAIN</button>
                 <button class="btn ghost" id="menuBtn">Menu</button>
             </div>
-            <div class="card"><h3>Top 10</h3><ol class="scores" id="overScores"></ol></div>
+            <div class="card"><h3 id="overBoardTitle">Top 10</h3><ol class="scores" id="overScores"></ol></div>
         </div>
     </div>
 
-    <script src="raptor-common.js?v=3"></script>
+    <script src="raptor-common.js?v=4"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -187,16 +193,32 @@
         function levelThreshold(level) {
             return level <= 0 ? 0 : 800 * level + 60 * level * (level - 1);
         }
-        const raptorBaseSpeed = () => Math.min(3.3 + 0.13 * (run.level - 1), 6.4);
+        // Easy is the baseline; Hard and "Yep, Try This" scale it up.
+        const DIFF = {
+            easy: { speed: 1, spawn: 1, pack: 0, tough: 0, lunge: 1, windup: 1, fire: 1, pickups: 1 },
+            hard: { speed: 1.12, spawn: 0.8, pack: 0, tough: 0.1, lunge: 0.75, windup: 0.85, fire: 1.12, pickups: 0.75 },
+            insane: { speed: 1.25, spawn: 0.65, pack: 1, tough: 0.2, lunge: 0.55, windup: 0.7, fire: 1.25, pickups: 0.5 }
+        };
+        const DIFF_NOTES = {
+            easy: 'The standard game.',
+            hard: 'Faster raptors, quicker lunges, bigger packs and fewer power-ups.',
+            insane: 'Everything is out to get you. Raptors outrun you from the start. Good luck.'
+        };
+        const D = () => DIFF[run.difficulty];
+        const raptorBaseSpeed = () => Math.min(3.3 + 0.13 * (run.level - 1), 6.4) * D().speed;
         const playerBaseSpeed = () => 5 + Math.min(run.level - 1, 12) * 0.12;
-        const spawnInterval = () => Math.max(32, 80 - (run.level - 1) * 3);
+        const spawnInterval = () => Math.round(Math.max(32, 80 - (run.level - 1) * 3) * D().spawn);
         const maxRaptors = () => Math.min(6 + run.level * 2, 40);
-        const packSize = () => 1 + Math.floor(run.level / 4);
-        const toughChance = () => Math.min(0.6, Math.max(0, (run.level - 1) * 0.07));
+        const packSize = () => 1 + Math.floor(run.level / 4) + D().pack;
+        const toughChance = () => Math.min(0.75, Math.max(0, (run.level - 1) * 0.07) + D().tough);
         const multiplier = () => run.combo >= 16 ? 3 : run.combo >= 8 ? 2 : 1;
 
         // ---------- Progression ----------
-        const board = RC.createLeaderboard('topScores');
+        // One leaderboard per difficulty; Easy keeps the original storage key.
+        const boards = {};
+        function board(id = run.difficulty) {
+            return boards[id] || (boards[id] = RC.createLeaderboard(id === 'easy' ? 'topScores' : `topScores_${id}`));
+        }
         const achievements = RC.createAchievements('raptorChaseAchievements', [
             { id: 'first_blood', icon: '🩸', name: 'First Blood', desc: 'Take down your first raptor' },
             { id: 'survive_60', icon: '⏱️', name: 'Still Breathing', desc: 'Survive for 1 minute' },
@@ -211,7 +233,9 @@
             { id: 'close_call', icon: '💨', name: 'Close Call', desc: 'Dash away from a raptor at point-blank range' },
             { id: 'arsenal', icon: '🔫', name: 'Arsenal', desc: 'Use 5 different weapons in one run' },
             { id: 'centurion', icon: '💯', name: 'Centurion', desc: 'Kill 100 raptors in one run' },
-            { id: 'veteran', icon: '🎖️', name: 'Veteran', desc: 'Kill 1,000 raptors in total' }
+            { id: 'veteran', icon: '🎖️', name: 'Veteran', desc: 'Kill 1,000 raptors in total' },
+            { id: 'hard_desert', icon: '😤', name: 'Hardened', desc: 'Reach the Desert (level 5) on Hard' },
+            { id: 'try_this', icon: '💀', name: 'Yep, Tried It', desc: 'Reach the Desert (level 5) on Yep, Try This' }
         ]);
         const stats = Object.assign({ runs: 0, kills: 0, time: 0, bestLevel: 1 }, RC.load('raptorChaseStats', {}));
         let playerName = RC.load('raptorPlayerName', 'Player');
@@ -237,6 +261,7 @@
             return {
                 frame: 0, score: 0, level: 1, kills: 0,
                 combo: 0, comboTimer: 0, bestCombo: 0,
+                difficulty: RC.settings.difficulty,
                 practice: false, weaponsUsed: new Set(), pickups: 0,
                 spawnTimer: 90, bombTimer: BOMB_INTERVAL, hazardTimer: 300, shootTimer: 20, spiral: 0,
                 weapon: null, weaponTimer: 0,
@@ -467,7 +492,7 @@
             const { raptor } = nearestRaptor();
             if (!raptor) return;
             const angle = Math.atan2(raptor.y - player.y, raptor.x - player.x);
-            run.shootTimer = fireWeapon(run.weapon && run.weapon.name, angle);
+            run.shootTimer = Math.round(fireWeapon(run.weapon && run.weapon.name, angle) * D().fire);
             RC.play('shoot');
         }
 
@@ -696,11 +721,11 @@
                 }
                 if (r.lungeCd > 0) r.lungeCd--;
                 else if (d < 180 && d > 45) {
-                    r.windup = Math.max(14, 24 - run.level);
+                    r.windup = Math.round(Math.max(14, 24 - run.level) * D().windup);
                     r.lx = dx / d;
                     r.ly = dy / d;
                     r.facing = dx > 0 ? -1 : 1;
-                    r.lungeCd = Math.max(70, 190 - run.level * 5) + Math.random() * 90;
+                    r.lungeCd = (Math.max(70, 190 - run.level * 5) + Math.random() * 90) * D().lunge;
                     RC.play('growl');
                     continue;
                 }
@@ -806,8 +831,8 @@
         }
 
         function updatePowerups() {
-            if (Math.random() < 0.0015 && run.powerups.filter(p => p.kind === 'power').length < 2) spawnPowerup('power');
-            if (Math.random() < 0.0012 && !run.powerups.some(p => p.kind === 'weapon')) spawnPowerup('weapon');
+            if (Math.random() < 0.0015 * D().pickups && run.powerups.filter(p => p.kind === 'power').length < 2) spawnPowerup('power');
+            if (Math.random() < 0.0012 * D().pickups && !run.powerups.some(p => p.kind === 'weapon')) spawnPowerup('weapon');
             run.powerups = run.powerups.filter(p => {
                 if (++p.age > p.life) return false;
                 if (Math.hypot(p.x - player.x, p.y - player.y) < 32) {
@@ -850,6 +875,8 @@
             shockwave(player.x, player.y, 90, 'rgba(124,255,107,0.9)', 5, 30);
             RC.play('levelup');
             if (run.level >= 5) unlock('desert');
+            if (run.level >= 5 && run.difficulty === 'hard') unlock('hard_desert');
+            if (run.level >= 5 && run.difficulty === 'insane') unlock('try_this');
             if (run.level >= 10) unlock('arctic');
             if (run.level >= 20) unlock('night');
         }
@@ -1368,7 +1395,7 @@
         function updateHud() {
             if (state === 'menu') return;
             setText(hud.score, run.score.toLocaleString());
-            setText(hud.level, `Level ${run.level} · ${themeFor(run.level).name}${run.practice ? ' · Practice' : ''}`);
+            setText(hud.level, `Level ${run.level} · ${themeFor(run.level).name}${run.difficulty !== 'easy' ? ' · ' + RC.DIFFICULTIES[run.difficulty].name : ''}${run.practice ? ' · Practice' : ''}`);
             const levelFrac = (run.score - run.levelStart) / (run.nextLevelAt - run.levelStart);
             setFill(hud.levelFill, levelFrac);
             setText(hud.levelPct, Math.floor(levelFrac * 100) + '%');
@@ -1412,8 +1439,8 @@
             $('pauseBtn').classList.toggle('hidden', !visible);
         }
 
-        function renderScores(el, mineId) {
-            const list = board.list();
+        function renderScores(el, mineId, id = run.difficulty) {
+            const list = board(id).list();
             if (!list.length) {
                 el.innerHTML = '<li class="empty">No scores yet. Be the first!</li>';
                 return;
@@ -1427,7 +1454,7 @@
         }
 
         function renderMenu() {
-            const best = board.best();
+            const best = board(RC.settings.difficulty).best();
             $('menuChips').innerHTML = [
                 ['Best', best ? best.toLocaleString() : '—'],
                 ['Best level', stats.bestLevel],
@@ -1435,7 +1462,8 @@
                 ['Achievements', `${achievements.count()}/${achievements.defs.length}`]
             ].map(([k, v]) => `<span class="chip">${k} <b>${v}</b></span>`).join('');
             $('achCount').textContent = `${achievements.count()}/${achievements.defs.length}`;
-            renderScores($('menuScores'));
+            renderScores($('menuScores'), null, RC.settings.difficulty);
+            $('menuBoardTitle').textContent = `Top 10 · ${RC.DIFFICULTIES[RC.settings.difficulty].name}`;
             achievements.render($('menuAchievements'));
             if (RC.isTouchDevice) {
                 $('menuKeys').innerHTML = 'Left stick to move · hold <b>SPRINT</b> · tap <b>DASH</b><br>Your gun fires on its own. Grab power-ups, and lure raptors into bomb blasts and lava.';
@@ -1470,7 +1498,7 @@
         function setPaused(paused) {
             if (paused && state === 'playing') {
                 state = 'paused';
-                $('pauseInfo').textContent = `Level ${run.level} · ${run.score.toLocaleString()} points · ${RC.formatTime(run.frame)}`;
+                $('pauseInfo').textContent = `${RC.DIFFICULTIES[run.difficulty].name} · Level ${run.level} · ${run.score.toLocaleString()} points · ${RC.formatTime(run.frame)}`;
                 show('pauseMenu', true);
                 showTouchControls(false);
             } else if (!paused && state === 'paused') {
@@ -1497,7 +1525,7 @@
             state = 'over';
             show('hud', false);
             let saved = null;
-            const prevBest = board.best();
+            const prevBest = board().best();
             if (!run.practice) {
                 stats.runs++;
                 stats.kills += run.kills;
@@ -1505,7 +1533,7 @@
                 stats.bestLevel = Math.max(stats.bestLevel, run.level);
                 RC.save('raptorChaseStats', stats);
                 if (stats.kills >= 1000) unlock('veteran');
-                saved = board.add({
+                saved = board().add({
                     name: playerName, score: run.score, level: run.level, kills: run.kills,
                     time: run.frame, date: new Date().toLocaleDateString()
                 });
@@ -1526,6 +1554,7 @@
             show('nameRow', !!saved && saved.rank >= 0);
             $('playerName').value = playerName;
             renderScores($('overScores'), run.savedId);
+            $('overBoardTitle').textContent = `Top 10 · ${RC.DIFFICULTIES[run.difficulty].name}`;
             show('gameOverScreen', true);
             $('againBtn').focus({ preventScroll: true });
         }
@@ -1534,7 +1563,7 @@
             playerName = e.target.value.trim().slice(0, 20) || 'Player';
             RC.save('raptorPlayerName', playerName);
             if (run.savedId) {
-                board.rename(run.savedId, playerName);
+                board().rename(run.savedId, playerName);
                 renderScores($('overScores'), run.savedId);
             }
         });
@@ -1614,6 +1643,7 @@
         document.querySelectorAll('button').forEach(b => b.addEventListener('click', () => b.blur()));
 
         RC.bindSettingButtons();
+        RC.bindDifficultyButtons(DIFF_NOTES, renderMenu);
         renderMenu();
         RC.createLoop(step, render).start();
     </script>

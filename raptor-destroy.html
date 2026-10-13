@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Raptor Destroy</title>
-    <link rel="stylesheet" href="raptor-ui.css?v=3">
+    <link rel="stylesheet" href="raptor-ui.css?v=4">
     <style>
         :root { --accent: #19e3ff; --accent-2: #2a6bff; }
         .hidden { display: none !important; }
@@ -79,6 +79,12 @@
             <h1 class="title">🦖 RAPTOR DESTROY</h1>
             <p class="tagline">A vertical shooter. Survive the onslaught, power up, and bring down the Alpha packs.</p>
             <div class="best-row" id="menuChips"></div>
+            <div class="difficulty">
+                <button class="diff-btn" data-difficulty="easy">Easy</button>
+                <button class="diff-btn" data-difficulty="hard">Hard</button>
+                <button class="diff-btn" data-difficulty="insane">Yep, Try This 💀</button>
+            </div>
+            <p class="note" id="difficultyNote"></p>
             <div class="btn-row"><button class="btn big" id="startButton">START MISSION</button></div>
             <div class="keys" id="menuKeys">
                 <kbd>WASD</kbd> / <kbd>Arrows</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> dash · <kbd>P</kbd> pause · <kbd>M</kbd> mute<br>
@@ -88,7 +94,7 @@
                 <label class="touch-toggle"><input type="checkbox" id="touchToggle"> Show touch controls (joystick &amp; buttons)</label>
             </div>
             <div class="columns">
-                <div class="card"><h3>Top 10</h3><ol class="scores" id="menuScores"></ol></div>
+                <div class="card"><h3 id="menuBoardTitle">Top 10</h3><ol class="scores" id="menuScores"></ol></div>
                 <div class="card"><h3>Achievements <span id="achCount"></span></h3><div class="achievements" id="menuAchievements"></div></div>
             </div>
             <div class="btn-row">
@@ -128,11 +134,11 @@
                 <button class="btn big" id="againBtn">RETRY MISSION</button>
                 <button class="btn ghost" id="menuBtn">Menu</button>
             </div>
-            <div class="card"><h3>Top 10</h3><ol class="scores" id="overScores"></ol></div>
+            <div class="card"><h3 id="overBoardTitle">Top 10</h3><ol class="scores" id="overScores"></ol></div>
         </div>
     </div>
 
-    <script src="raptor-common.js?v=3"></script>
+    <script src="raptor-common.js?v=4"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -205,11 +211,27 @@
         const FIRE_RATES = [10, 9, 8, 7, 6];
         // Kills needed to clear each wave. Based on kills (not score) so combos don't skip waves.
         const killsForWave = n => 15 + 5 * (n - 1);
-        const hpScale = () => 1 + 0.14 * (run.wave - 1);
+        // Easy is the baseline; Hard and "Yep, Try This" scale it up.
+        const DIFF = {
+            easy: { hp: 1, dmg: 1, spitChance: 0, spitRate: 1, spitSpeed: 1, spawn: 1, heal: 1, chase: 0.95 },
+            hard: { hp: 1.25, dmg: 1.3, spitChance: 0.15, spitRate: 0.8, spitSpeed: 1.1, spawn: 0.85, heal: 0.6, chase: 1.0 },
+            insane: { hp: 1.5, dmg: 1.6, spitChance: 0.3, spitRate: 0.6, spitSpeed: 1.2, spawn: 0.7, heal: 0.3, chase: 1.05 }
+        };
+        const DIFF_NOTES = {
+            easy: 'The standard game.',
+            hard: 'Tougher raptors, more spit, harder hits and less healing.',
+            insane: 'Chasers are faster than you. Spit everywhere. Barely any healing. Good luck.'
+        };
+        const D = () => DIFF[run.difficulty];
+        const hpScale = () => (1 + 0.14 * (run.wave - 1)) * D().hp;
         const multiplier = () => run.combo >= 25 ? 3 : run.combo >= 10 ? 2 : 1;
 
         // ---------- Progression ----------
-        const board = RC.createLeaderboard('raptorDestroyHighScores');
+        // One leaderboard per difficulty; Easy keeps the original storage key.
+        const boards = {};
+        function board(id = run.difficulty) {
+            return boards[id] || (boards[id] = RC.createLeaderboard(id === 'easy' ? 'raptorDestroyHighScores' : `raptorDestroyHighScores_${id}`));
+        }
         const achievements = RC.createAchievements('raptorDestroyAchievements', [
             { id: 'first_kill', icon: '🎯', name: 'First Contact', desc: 'Destroy your first raptor' },
             { id: 'wave_5', icon: '🧊', name: 'Deep Freeze', desc: 'Reach wave 5' },
@@ -223,7 +245,9 @@
             { id: 'arsenal', icon: '🔫', name: 'Full Arsenal', desc: 'Use 5 different weapons in one run' },
             { id: 'centurion', icon: '💯', name: 'Centurion', desc: 'Destroy 100 raptors in one run' },
             { id: 'score_500k', icon: '🏆', name: 'Half a Million', desc: 'Score 500,000 in one run' },
-            { id: 'veteran', icon: '🎖️', name: 'Veteran', desc: 'Destroy 2,500 raptors in total' }
+            { id: 'veteran', icon: '🎖️', name: 'Veteran', desc: 'Destroy 2,500 raptors in total' },
+            { id: 'hard_wave5', icon: '😤', name: 'Hardened', desc: 'Reach wave 5 on Hard' },
+            { id: 'try_this', icon: '💀', name: 'Yep, Tried It', desc: 'Reach wave 5 on Yep, Try This' }
         ]);
         const stats = Object.assign({ runs: 0, kills: 0, time: 0, bestWave: 1, bosses: 0 }, RC.load('raptorDestroyStats', {}));
         let playerName = RC.load('raptorPlayerName', 'Player');
@@ -247,6 +271,7 @@
                 frame: 0, score: 0, wave: 1, kills: 0,
                 combo: 0, comboTimer: 0, bestCombo: 0,
                 health: 100, power: 0, powerLevel: 1, fireCooldown: 0, spiral: 0,
+                difficulty: RC.settings.difficulty,
                 weapon: 'single', weaponsUsed: new Set(['single']),
                 invincible: 0, speed: 0, freeze: 0,
                 stamina: 100, exhausted: false, dashCooldown: 0,
@@ -335,7 +360,7 @@
                     baseSpeed: 2.2 + run.wave * 0.1,
                     alwaysChase: Math.random() < 0.5,
                     // Spitters lob aimed shots at you from wave 2 on.
-                    shooter: run.wave >= 2 && Math.random() < Math.min(0.6, 0.15 + run.wave * 0.04),
+                    shooter: run.wave >= 2 && Math.random() < Math.min(0.8, 0.15 + run.wave * 0.04 + D().spitChance),
                     shootCd: 60 + Math.random() * 120,
                     hp, maxHp: hp, points: type.points,
                     flash: 0, facing: 1, tilt: 0
@@ -344,7 +369,7 @@
         }
 
         function spawnBosses() {
-            const hp = 300 + run.wave * 45;
+            const hp = Math.round((300 + run.wave * 45) * D().hp);
             for (let i = 0; i < 3; i++) {
                 run.enemies.push({
                     x: W / 4 * (i + 1), y: -110 - i * 50,
@@ -455,7 +480,7 @@
 
             if (!e.isBoss) {
                 const roll = Math.random();
-                if (roll < 0.012) spawnPowerup('health', e.x, e.y);
+                if (roll < 0.012 * D().heal) spawnPowerup('health', e.x, e.y);
                 else if (roll < 0.05) spawnPowerup(['invincible', 'speed', 'freeze'][Math.floor(Math.random() * 3)], e.x, e.y);
                 else if (roll < 0.075) spawnPowerup(WEAPON_DROPS[Math.floor(Math.random() * WEAPON_DROPS.length)], e.x, e.y);
             } else {
@@ -483,7 +508,7 @@
 
         function damagePlayer(amount, fromX, fromY) {
             if (player.invuln > 0 || run.invincible > 0 || state !== 'playing') return;
-            run.health -= amount;
+            run.health -= Math.round(amount * D().dmg);
             run.damagedThisWave = true;
             // Hits drain power; at an empty bar they knock your guns down a level.
             run.power -= 30;
@@ -747,9 +772,9 @@
                 case 'stalk': {
                     const speed = Math.min(2.6 + run.wave * 0.04, 4.2);
                     if (--e.shootCd <= 0) {
-                        e.shootCd = Math.max(45, 90 - run.wave);
+                        e.shootCd = Math.round(Math.max(45, 90 - run.wave) * D().spitRate);
                         const a = Math.atan2(dy, dx);
-                        for (let i = -2; i <= 2; i++) spit(e.x, e.y, a + i * 0.22, 4.5);
+                        for (let i = -2; i <= 2; i++) spit(e.x, e.y, a + i * 0.22, 4.5 * D().spitSpeed);
                     }
                     e.vx += (dx / d * speed - e.vx) * 0.05;
                     e.vy += (dy / d * speed - e.vy) * 0.05;
@@ -799,7 +824,7 @@
         }
 
         function updateEnemies() {
-            const chaseCap = PLAYER_SPEED * 0.95;
+            const chaseCap = PLAYER_SPEED * D().chase;
             for (const e of run.enemies) {
                 if (e.dead) continue;
                 if (e.flash > 0) e.flash--;
@@ -818,8 +843,8 @@
                 const d = Math.hypot(dx, dy) || 1;
                 const prevX = e.x;
                 if (e.shooter && e.y > 0 && --e.shootCd <= 0) {
-                    e.shootCd = Math.max(70, 170 - run.wave * 4) + Math.random() * 80;
-                    spit(e.x, e.y, Math.atan2(dy, dx), Math.min(6.5, 3.8 + run.wave * 0.1));
+                    e.shootCd = (Math.max(70, 170 - run.wave * 4) + Math.random() * 80) * D().spitRate;
+                    spit(e.x, e.y, Math.atan2(dy, dx), Math.min(6.5, 3.8 + run.wave * 0.1) * D().spitSpeed);
                 }
                 if (d < 340 || e.alwaysChase) {
                     // Chasers are always a little slower than you, so you can outmanoeuvre them.
@@ -944,10 +969,10 @@
             if (--run.spawnTimer > 0) return;
             if (run.enemies.length < 50) spawnFormation();
             run.burstsLeft--;
-            run.spawnTimer = Math.max(14, 38 - run.wave * 2);
+            run.spawnTimer = Math.round(Math.max(14, 38 - run.wave * 2) * D().spawn);
             if (run.burstsLeft <= 0) {
                 run.burstsLeft = burstsForWave();
-                run.groupCooldown = Math.max(45, 120 - run.wave * 5);
+                run.groupCooldown = Math.round(Math.max(45, 120 - run.wave * 5) * D().spawn);
             }
         }
 
@@ -956,7 +981,7 @@
                 run.powerupTimer = run.bossActive ? 360 : 480;
                 const roll = Math.random();
                 let type;
-                if (roll < (run.bossActive ? 0.35 : 0.15)) type = 'health';
+                if (roll < (run.bossActive ? 0.35 : 0.15) * D().heal) type = 'health';
                 else if (roll < 0.8) type = WEAPON_DROPS[Math.floor(Math.random() * WEAPON_DROPS.length)];
                 else type = ['invincible', 'speed', 'freeze'][Math.floor(Math.random() * 3)];
                 spawnPowerup(type, 40 + Math.random() * (W - 80), -20);
@@ -986,6 +1011,8 @@
                 RC.play('levelup');
             }
             if (run.wave >= 5) unlock('wave_5');
+            if (run.wave >= 5 && run.difficulty === 'hard') unlock('hard_wave5');
+            if (run.wave >= 5 && run.difficulty === 'insane') unlock('try_this');
             if (run.wave >= 10) unlock('wave_10');
             if (run.wave >= 20) unlock('wave_20');
         }
@@ -1453,7 +1480,7 @@
         function updateHud() {
             if (state === 'menu') return;
             setText(hud.score, run.score.toLocaleString());
-            setText(hud.wave, `Wave ${run.wave} · ${themeFor(run.wave).name}`);
+            setText(hud.wave, `Wave ${run.wave} · ${themeFor(run.wave).name}${run.difficulty !== 'easy' ? ' · ' + RC.DIFFICULTIES[run.difficulty].name : ''}`);
             if (run.bossActive) {
                 setText(hud.waveLabel, 'Boss fight');
                 setText(hud.wavePct, '');
@@ -1518,8 +1545,8 @@
             document.body.classList.toggle('touch', on);
         }
 
-        function renderScores(el, mineId) {
-            const list = board.list();
+        function renderScores(el, mineId, id = run.difficulty) {
+            const list = board(id).list();
             if (!list.length) {
                 el.innerHTML = '<li class="empty">No scores yet. Be the first!</li>';
                 return;
@@ -1533,7 +1560,7 @@
         }
 
         function renderMenu() {
-            const best = board.best();
+            const best = board(RC.settings.difficulty).best();
             $('menuChips').innerHTML = [
                 ['Best', best ? best.toLocaleString() : '—'],
                 ['Best wave', stats.bestWave],
@@ -1541,7 +1568,8 @@
                 ['Achievements', `${achievements.count()}/${achievements.defs.length}`]
             ].map(([k, v]) => `<span class="chip">${k} <b>${v}</b></span>`).join('');
             $('achCount').textContent = `${achievements.count()}/${achievements.defs.length}`;
-            renderScores($('menuScores'));
+            renderScores($('menuScores'), null, RC.settings.difficulty);
+            $('menuBoardTitle').textContent = `Top 10 · ${RC.DIFFICULTIES[RC.settings.difficulty].name}`;
             achievements.render($('menuAchievements'));
         }
 
@@ -1569,7 +1597,7 @@
         function setPaused(paused) {
             if (paused && state === 'playing') {
                 state = 'paused';
-                $('pauseInfo').textContent = `Wave ${run.wave} · ${run.score.toLocaleString()} points · ${RC.formatTime(run.frame)}`;
+                $('pauseInfo').textContent = `${RC.DIFFICULTIES[run.difficulty].name} · Wave ${run.wave} · ${run.score.toLocaleString()} points · ${RC.formatTime(run.frame)}`;
                 show('pauseMenu', true);
                 showTouchControls(false);
             } else if (!paused && state === 'paused') {
@@ -1593,7 +1621,7 @@
         function showGameOver() {
             state = 'over';
             show('hud', false);
-            const prevBest = board.best();
+            const prevBest = board().best();
             stats.runs++;
             stats.kills += run.kills;
             stats.time += run.frame;
@@ -1601,7 +1629,7 @@
             stats.bosses += run.bossesBeaten;
             RC.save('raptorDestroyStats', stats);
             if (stats.kills >= 2500) unlock('veteran');
-            const saved = board.add({
+            const saved = board().add({
                 name: playerName, score: run.score, wave: run.wave, kills: run.kills,
                 time: run.frame, date: new Date().toLocaleDateString()
             });
@@ -1619,6 +1647,7 @@
             show('nameRow', saved.rank >= 0);
             $('playerName').value = playerName;
             renderScores($('overScores'), run.savedId);
+            $('overBoardTitle').textContent = `Top 10 · ${RC.DIFFICULTIES[run.difficulty].name}`;
             show('gameOverScreen', true);
             $('againBtn').focus({ preventScroll: true });
         }
@@ -1627,7 +1656,7 @@
             playerName = e.target.value.trim().slice(0, 20) || 'Player';
             RC.save('raptorPlayerName', playerName);
             if (run.savedId) {
-                board.rename(run.savedId, playerName);
+                board().rename(run.savedId, playerName);
                 renderScores($('overScores'), run.savedId);
             }
         });
@@ -1682,6 +1711,7 @@
         document.querySelectorAll('button').forEach(b => b.addEventListener('click', () => b.blur()));
 
         RC.bindSettingButtons();
+        RC.bindDifficultyButtons(DIFF_NOTES, renderMenu);
         renderMenu();
         RC.createLoop(step, render).start();
     </script>

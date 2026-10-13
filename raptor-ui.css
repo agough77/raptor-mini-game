@@ -40,6 +40,11 @@ canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated
 @media (max-width: 640px) { .columns { grid-template-columns: 1fr; } }
 .card { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--panel-edge); border-radius: 12px; padding: 12px 14px; min-width: 0; }
 
+.difficulty { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px; margin-top: 6px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--panel-edge); }
+.diff-btn { font: inherit; font-weight: 700; font-size: 15px; padding: 8px 16px; border: 0; border-radius: 10px; cursor: pointer; color: var(--muted); background: transparent; transition: background 0.15s, color 0.15s; }
+.diff-btn:hover { color: var(--text); }
+.diff-btn.selected { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.diff-btn[data-difficulty="insane"].selected { background: linear-gradient(135deg, #ff2d2d, #7a0000); }
 .best-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0 4px; }
 .chip { display: inline-flex; gap: 6px; align-items: baseline; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--panel-edge); border-radius: 999px; padding: 5px 12px; font-size: 14px; color: var(--muted); }
 .chip b { color: var(--text); font-variant-numeric: tabular-nums; }

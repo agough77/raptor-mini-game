@@ -20,6 +20,12 @@ Open `raptor.html` or `raptor-destroy.html` in a modern browser, or play them on
 
 Your gun fires automatically at the nearest raptor.
 
+### 🎚️ Difficulty
+Pick a difficulty on the start screen. Each one has its own Top 10.
+- **Easy**: the standard game.
+- **Hard**: faster, tougher raptors and fewer pick-ups. In Chase, raptors lunge more often and come in bigger packs. In Destroy, raptors spit more, hits hurt more and healing is scarcer.
+- **Yep, Try This 💀**: everything turned up. In Chase, raptors outrun you from the first level. In Destroy, chasers are faster than you. Reach level/wave 5 for the "Yep, Tried It" achievement.
+
 ## 🦖 Raptor Chase
 
 Survive as long as you can. Raptors are telegraphed with a red **!** before they appear, so they never spawn on top of you.

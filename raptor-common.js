@@ -59,6 +59,35 @@
         refresh();
     }
 
+    // ---------- Difficulty ----------
+    const DIFFICULTIES = {
+        easy: { name: 'Easy' },
+        hard: { name: 'Hard' },
+        insane: { name: 'Yep, Try This' }
+    };
+    if (!DIFFICULTIES[settings.difficulty]) settings.difficulty = 'easy';
+
+    // Wires [data-difficulty] buttons; `notes` maps each id to a one-line description.
+    function bindDifficultyButtons(notes, onChange) {
+        const refresh = () => {
+            document.querySelectorAll('[data-difficulty]').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.difficulty === settings.difficulty);
+            });
+            const note = document.getElementById('difficultyNote');
+            if (note) note.textContent = notes[settings.difficulty] || '';
+        };
+        document.querySelectorAll('[data-difficulty]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                unlockAudio();
+                setSetting('difficulty', btn.dataset.difficulty);
+                play('click');
+                refresh();
+                if (onChange) onChange();
+            });
+        });
+        refresh();
+    }
+
     // ---------- Audio (synthesized, no files needed) ----------
     let actx = null;
     let master = null;
@@ -397,6 +426,7 @@
     window.RC = {
         load, save, escapeHtml, formatTime,
         settings, setSetting, bindSettingButtons,
+        DIFFICULTIES, bindDifficultyButtons,
         unlockAudio, play,
         shake, createFloaters, toast,
         createLeaderboard, createAchievements,
