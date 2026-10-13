@@ -1,130 +1,96 @@
 # 🦖 Raptor Chase - Mini Game
 
-An intense browser-based survival game where you must evade prehistoric raptors while navigating through 11 unique themed environments!
+Two browser games about outlasting prehistoric raptors, built with plain HTML5 canvas and JavaScript:
+
+- **Raptor Chase** (`raptor.html`): top-down survival across 11 themed lands.
+- **Raptor Destroy** (`raptor-destroy.html`): a vertical shooter with waves, power levels and Alpha boss packs.
 
 ## 🎮 How to Play
 
-Simply open `raptor.html` in any modern web browser and start playing!
+Open `raptor.html` or `raptor-destroy.html` in a modern browser, or play them on GitHub Pages. Keep the files together in one folder: both games load the shared `raptor-common.js` and `raptor-ui.css`.
 
-### Controls
-- **WASD / Arrow Keys** - Move your character
-- **Shift** - Sprint (consumes stamina)
-- **Spacebar** - Dash ability (cooldown required)
-- **P / ESC** - Pause game
-- **1-9, 0, -** - Jump to different levels (testing mode)
+### Controls (both games)
+- **WASD / Arrow Keys**: move
+- **Shift**: sprint (uses stamina; run it dry and you have to recover before sprinting again)
+- **Spacebar**: dash (short burst with a moment of invulnerability)
+- **P / Esc**: pause (the game also pauses itself when you switch tabs)
+- **M**: mute
+- **Enter**: start, or play again from the game over screen
+- **Touch**: on-screen joystick, plus Sprint and Dash buttons
 
-### Game Features
+Your gun fires automatically at the nearest raptor.
 
-#### 🌍 11 Themed Environments
-Progress through increasingly challenging stages, each with unique backgrounds and hazards:
-- **Jungle** (Level 1-4) - Quicksand that slows you down
-- **Desert** (Level 5-9) - Sandstorms that push you around
-- **Arctic** (Level 10-14) - Slippery ice patches
-- **Volcano** (Level 15-19) - Damaging lava pools
-- **Night** (Level 20-24) - Obscuring fog
-- **Swamp** (Level 25-29) - Sticky mud pits
-- **Canyon** (Level 30-39) - Rocky obstacles
-- **Storm** (Level 40-49) - Spiraling tornadoes
-- **Lava** (Level 50-74) - Extreme volcanic hazards
-- **Void** (Level 75-99) - Cosmic vortexes
-- **Rainbow** (Level 100+) - Magical paradise
+## 🦖 Raptor Chase
 
-#### ⚡ Power-ups
-Collect power-ups to gain temporary advantages:
-- **🛡️ Shield** - 5 seconds of invincibility
-- **⚡ Speed Boost** - Double movement speed
-- **❄️ Freeze** - Stop raptors in their tracks
+Survive as long as you can. Raptors are telegraphed with a red **!** before they appear, so they never spawn on top of you.
 
-#### 🔫 Weapon System
-Find rare weapon powerups that change your shooting pattern for 5 seconds:
-- **⭐ Star** - 5-point star pattern
-- **🌀 Spiral** - Rotating bullets
-- **💥 Shotgun** - Wide spread
-- **⚡ Laser** - Rapid fire
-- **⭕ Circle** - 360° coverage
-- **❌ X-Pattern** - Diagonal shots
-- **〰️ Wave** - Parallel bullets
-- **🔥 Rapid** - Machine gun
-- **🎯 Sniper** - Powerful long-range
-- **💫 Chaos** - Random mayhem
+### 🌍 11 Themed Environments
+| Levels | Theme | Hazard |
+|---|---|---|
+| 1-4 | Jungle | Quicksand slows you down |
+| 5-9 | Desert | Sandstorms swirl you and the raptors around |
+| 10-14 | Arctic | Ice: you lose grip and slide |
+| 15-19 | Volcano | Lava drains stamina, and burns up raptors that wander in |
+| 20-24 | Night | Fog hides the raptors inside it |
+| 25-29 | Swamp | Sticky mud |
+| 30-39 | Canyon | Boulders block you and the raptors (use them as cover) |
+| 40-49 | Storm | Tornadoes pull everything toward their centre |
+| 50-74 | Lava | Extreme lava pools |
+| 75-99 | Void | Vortexes pull everything in |
+| 100+ | Rainbow | Rainbow rings restore stamina and give bonus points |
 
-#### 💣 Bomb Drops
-Random bombs drop every 15 seconds - use them strategically to clear out raptor swarms!
+### ⚡ Power-ups
+- **🛡️ Shield** (5s): raptors that touch you are destroyed
+- **⚡ Speed** (5s): move 50% faster
+- **❄️ Freeze** (3s): raptors stop, and touching one shatters it
 
-#### 🎯 Core Mechanics
-- **Auto-targeting** - Your character automatically shoots at the nearest raptor
-- **Stamina system** - Manage your energy for sprinting
-- **Dash ability** - Quick escape on cooldown
-- **Progressive difficulty** - Each level requires more points and adds tougher enemies
-- **Environmental hazards** - Each theme has unique obstacles to avoid
-- **Danger indicator** - Screen glows red when raptors are nearby
+### 🔫 Weapons (8 seconds each)
+Star, Spiral, Shotgun, Laser, Circle, X-Pattern, Wave, Rapid, Sniper (pierces through a line of raptors), Chaos.
 
-## 🎨 Customization
+### 💣 Bombs
+A bomb falls every 15 seconds. Its landing zone is marked on the ground, so lure raptors into it. Bombs don't hurt you.
 
-### Adding Custom Backgrounds
-The game supports custom background images for each theme. Place JPEG images in the same folder as `raptor.html`:
+### 🏆 Scoring
+- Survival: 1 point per frame (60 per second)
+- Kills: 30 points, bomb kills 20 points
+- **Combos**: chain kills within 2.5 seconds. 8+ kills doubles points, 16+ triples them.
+- Each level takes a little longer than the last. Raptors get faster, come in bigger packs, and from level 3 some take two hits.
 
-- `jungle.jpeg`
-- `desert.jpeg`
-- `arctic.jpeg`
-- `volcano.jpeg`
-- `night.jpeg`
-- `swamp.jpeg`
-- `canyon.jpeg`
-- `storm.jpeg`
-- `lava.jpeg`
-- `void.jpeg`
-- `rainbow.jpeg`
+### 🧪 Testing levels
+Keys **1-9, 0, -** jump to each theme (levels 1, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100). Runs that use them are marked as practice, and their scores and achievements aren't saved.
 
+## 🚀 Raptor Destroy
 
-## 🏆 Scoring System
-- Survive to earn points
-- Kill raptors with bullets: **+10 points**
-- Kill raptors with bombs: **+5 points**
-- Level up requirements increase progressively:
-  - Level 1→2: 200 points
-  - Level 2→3: 350 points
-  - Level 3→4: 500 points
-  - Each level adds +150 points to the requirement
+- Raptors attack in 3-raptor formations that weave, dive and loop. Get close and they'll chase you, but they're always a little slower than you.
+- **Waves** advance by kills. Themes change as you progress, each with its own hazard.
+- **Power levels**: kills charge your Power bar. Each full bar raises your power level (up to 5) for faster fire and more damage. Getting hit drains the bar, and at empty it knocks you down a level.
+- **Weapons**: Double, Triple, Spread, Star, Spiral, Circle, Wave, Laser and Chaos drop from raptors and from the sky. They last until you pick up another.
+- **Alpha packs**: every 10th wave, three huge Alpha raptors attack. Watch for the red charge line and dash out of the way. Beating a pack heals 40 HP.
+- **Combos**: 10+ kills double points, 25+ triple them. Taking damage breaks your combo.
 
-## 🛠️ Technical Details
-- Pure HTML5, CSS3, and vanilla JavaScript
-- Canvas-based rendering
-- No external dependencies
-- Runs entirely in the browser
-- Local storage for top scores
+## ✨ Both games
+- Synthesized sound effects (no audio files needed), screen shake, hit flashes, particles and floating score text. Sound and screen shake can be turned off in the menu or pause screen.
+- Top 10 leaderboard per game, saved automatically when you die. Type your name on the game over screen to update your entry.
+- Achievements and lifetime stats on the start screen.
+- Runs at the same speed on 60Hz, 120Hz and 144Hz screens.
+
+## 🎨 Custom Backgrounds
+Each theme loads a JPEG from the game folder: `jungle.jpeg`, `desert.jpeg`, `arctic.jpeg`, `volcano.jpeg`, `night.jpeg`, `swamp.jpeg`, `canyon.jpeg`, `storm.jpeg`, `lava.jpeg`, `void.jpeg`, `rainbow.jpeg`. Replace them with your own. If one is missing, the theme falls back to a colour gradient.
 
 ## 📝 Files
-- `raptor.html` - Main game file (playable standalone)
-- `raptor_original.html` - Original version backup
-- `README.md` - This file
+- `raptor.html`: Raptor Chase
+- `raptor-destroy.html`: Raptor Destroy
+- `raptor-common.js`: shared game loop, sound, effects, leaderboards and achievements
+- `raptor-ui.css`: shared menus, HUD and touch controls
+- `raptor_original.html`: original version backup
 
-## 🎯 Tips for Success
-1. **Manage stamina** - Don't sprint constantly
-2. **Use dash wisely** - Save it for emergencies
-3. **Watch for hazards** - Each environment has unique dangers
-4. **Collect weapon powerups** - They can clear large groups of raptors
-5. **Use bombs strategically** - Position yourself to survive the blast while eliminating threats
-6. **Keep moving** - Staying still makes you an easy target
-
-## 🚀 Future Enhancements
-- Sound effects and background music support
-- More weapon types
-- Boss raptors
-- Multiplayer mode
-- Mobile touch controls
+## 🛠️ Technical Details
+- Pure HTML5, CSS3 and vanilla JavaScript, with no external dependencies
+- Canvas rendering on a fixed 60-step-per-second game loop
+- Local storage for scores, achievements, stats and settings
 
 ## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-This means you are free to:
-- ✅ Use the code commercially
-- ✅ Modify and distribute
-- ✅ Use privately
-- ✅ Sublicense
-
-## 🎮 Play Now!
-Just open `raptor.html` in your browser and survive as long as you can!
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 Made with ❤️ for raptor enthusiasts and arcade game lovers!
