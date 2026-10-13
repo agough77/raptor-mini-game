@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Raptor Destroy</title>
-    <link rel="stylesheet" href="raptor-ui.css?v=4">
+    <link rel="stylesheet" href="raptor-ui.css?v=5">
     <style>
         :root { --accent: #19e3ff; --accent-2: #2a6bff; }
         .hidden { display: none !important; }
@@ -138,7 +138,7 @@
         </div>
     </div>
 
-    <script src="raptor-common.js?v=4"></script>
+    <script src="raptor-common.js?v=5"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -213,14 +213,15 @@
         const killsForWave = n => 15 + 5 * (n - 1);
         // Easy is the baseline; Hard and "Yep, Try This" scale it up.
         const DIFF = {
-            easy: { hp: 1, dmg: 1, spitChance: 0, spitRate: 1, spitSpeed: 1, spawn: 1, heal: 1, chase: 0.95 },
-            hard: { hp: 1.25, dmg: 1.3, spitChance: 0.15, spitRate: 0.8, spitSpeed: 1.1, spawn: 0.85, heal: 0.6, chase: 1.0 },
-            insane: { hp: 1.5, dmg: 1.6, spitChance: 0.3, spitRate: 0.6, spitSpeed: 1.2, spawn: 0.7, heal: 0.3, chase: 1.05 }
+            easy: { hp: 1, dmg: 1, spitChance: 0, spitRate: 1, spitSpeed: 1, spawn: 1, heal: 1, chase: 0.95, speed: 1 },
+            hard: { hp: 1.4, dmg: 1.5, spitChance: 0.2, spitRate: 0.7, spitSpeed: 1.15, spawn: 0.75, heal: 0.5, chase: 1.0, speed: 1.3 },
+            // Chasers are faster than you from wave 1: you can't just outrun them.
+            insane: { hp: 1.8, dmg: 2, spitChance: 0.35, spitRate: 0.5, spitSpeed: 1.3, spawn: 0.55, heal: 0.25, chase: 1.12, speed: 1.65 }
         };
         const DIFF_NOTES = {
             easy: 'The standard game.',
             hard: 'Tougher raptors, more spit, harder hits and less healing.',
-            insane: 'Chasers are faster than you. Spit everywhere. Barely any healing. Good luck.'
+            insane: 'Chasers are faster than you from wave 1. Spit everywhere. Barely any healing.'
         };
         const D = () => DIFF[run.difficulty];
         const hpScale = () => (1 + 0.14 * (run.wave - 1)) * D().hp;
@@ -848,7 +849,7 @@
                 }
                 if (d < 340 || e.alwaysChase) {
                     // Chasers are always a little slower than you, so you can outmanoeuvre them.
-                    const speed = Math.min(chaseCap, e.baseSpeed + 1.5 + run.wave * 0.15);
+                    const speed = Math.min(chaseCap, (e.baseSpeed + 1.5 + run.wave * 0.15) * D().speed);
                     e.vx += (dx / d * speed - e.vx) * 0.1;
                     e.vy += (dy / d * speed - e.vy) * 0.1;
                     e.x += e.vx;

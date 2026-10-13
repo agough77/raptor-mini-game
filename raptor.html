@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Raptor Chase</title>
-    <link rel="stylesheet" href="raptor-ui.css?v=4">
+    <link rel="stylesheet" href="raptor-ui.css?v=5">
     <style>
         :root { --accent: #ff7a1a; --accent-2: #ff2d2d; }
         .hidden { display: none !important; }
@@ -119,7 +119,7 @@
         </div>
     </div>
 
-    <script src="raptor-common.js?v=4"></script>
+    <script src="raptor-common.js?v=5"></script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -195,17 +195,18 @@
         }
         // Easy is the baseline; Hard and "Yep, Try This" scale it up.
         const DIFF = {
-            easy: { speed: 1, spawn: 1, pack: 0, tough: 0, lunge: 1, windup: 1, fire: 1, pickups: 1 },
-            hard: { speed: 1.12, spawn: 0.8, pack: 0, tough: 0.1, lunge: 0.75, windup: 0.85, fire: 1.12, pickups: 0.75 },
-            insane: { speed: 1.25, spawn: 0.65, pack: 1, tough: 0.2, lunge: 0.55, windup: 0.7, fire: 1.25, pickups: 0.5 }
+            easy: { speed: 1, spawn: 1, pack: 0, tough: 0, lunge: 1, windup: 1, fire: 1, pickups: 1, spawnDist: 260, telegraph: 50, regen: 1 },
+            hard: { speed: 1.3, spawn: 0.7, pack: 1, tough: 0.15, lunge: 0.6, windup: 0.8, fire: 1.2, pickups: 0.6, spawnDist: 220, telegraph: 42, regen: 0.85 },
+            // Raptors start faster than your run speed: you have to sprint, dash and use the gun to survive.
+            insane: { speed: 1.6, spawn: 0.5, pack: 2, tough: 0.3, lunge: 0.4, windup: 0.65, fire: 1.4, pickups: 0.4, spawnDist: 170, telegraph: 34, regen: 0.7 }
         };
         const DIFF_NOTES = {
             easy: 'The standard game.',
             hard: 'Faster raptors, quicker lunges, bigger packs and fewer power-ups.',
-            insane: 'Everything is out to get you. Raptors outrun you from the start. Good luck.'
+            insane: 'Raptors are faster than you from the first second. Sprint, dash, or get eaten.'
         };
         const D = () => DIFF[run.difficulty];
-        const raptorBaseSpeed = () => Math.min(3.3 + 0.13 * (run.level - 1), 6.4) * D().speed;
+        const raptorBaseSpeed = () => Math.min(Math.min(3.3 + 0.13 * (run.level - 1), 6.4) * D().speed, 8.5);
         const playerBaseSpeed = () => 5 + Math.min(run.level - 1, 12) * 0.12;
         const spawnInterval = () => Math.round(Math.max(32, 80 - (run.level - 1) * 3) * D().spawn);
         const maxRaptors = () => Math.min(6 + run.level * 2, 40);
@@ -333,14 +334,14 @@
         function spawnRaptor() {
             // Raptors are telegraphed for a moment before they can move, so they never appear on top of you.
             // Tougher raptors show up more often as levels rise: bigger, a bit slower, two hits to drop.
-            const spot = randomSpot(Math.min(260, Math.max(W, H) * 0.35));
+            const spot = randomSpot(Math.min(D().spawnDist, Math.max(W, H) * 0.35));
             const tough = Math.random() < toughChance();
             run.raptors.push({
                 x: spot.x, y: spot.y, vx: 0, vy: 0, size: tough ? 48 : 40,
                 hp: tough ? (run.level >= 12 ? 3 : 2) : 1, flash: 0,
                 lungeCd: 60 + Math.random() * 120, windup: 0, lunge: 0, lx: 0, ly: 0,
                 speedMul: (0.85 + Math.random() * 0.3) * (tough ? 0.9 : 1),
-                spawn: 50, facing: 1, phase: Math.random() * 6, wander: Math.random() * 6,
+                spawn: D().telegraph, spawnMax: D().telegraph, facing: 1, phase: Math.random() * 6, wander: Math.random() * 6,
                 burn: 0, dead: false
             });
         }
@@ -659,7 +660,7 @@
             if (run.exhausted && run.stamina > 25) run.exhausted = false;
             const sprinting = input.sprint && moving && !run.exhausted;
             if (sprinting) run.stamina = Math.max(0, run.stamina - 1.4);
-            else run.stamina = Math.min(100, run.stamina + 0.55);
+            else run.stamina = Math.min(100, run.stamina + 0.55 * D().regen);
 
             let speed = playerBaseSpeed() * env.slow;
             if (sprinting) speed *= 1.7;
@@ -1087,7 +1088,7 @@
             const s = r.size;
             if (r.spawn > 0) {
                 // Spawn warning: a shrinking red ring with a "!" in it.
-                const t = r.spawn / 50;
+                const t = r.spawn / r.spawnMax;
                 ctx.save();
                 ctx.globalAlpha = 0.4 + (1 - t) * 0.6;
                 ctx.strokeStyle = '#ff3030';
